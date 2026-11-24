@@ -1,0 +1,743 @@
+@model PCBuilder_DACS.Models.Product
+@{
+    ViewData["Title"] = Model.ProductName;
+    var reviews = ViewBag.Reviews as List<PCBuilder_DACS.Models.ProductReview> ?? new List<PCBuilder_DACS.Models.ProductReview>();
+    bool hasPurchased = ViewBag.HasPurchased ?? false;
+    bool alreadyReviewed = ViewBag.AlreadyReviewed ?? false;
+
+    double avgRating = reviews.Any() ? reviews.Average(r => r.Rating ?? 5) : 0;
+    int positiveCount = reviews.Count(r => r.Sentiment == "Positive");
+    int negativeCount = reviews.Count(r => r.Sentiment == "Negative");
+}
+
+@section Styles {
+<style>
+    /* ─── Star Rating Input ─── */
+    .star-rating { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 4px; }
+    .star-rating input { display: none; }
+    .star-rating label {
+        font-size: 2rem; color: #dee2e6; cursor: pointer;
+        transition: color 0.15s, transform 0.15s;
+    }
+    .star-rating label:hover,
+    .star-rating label:hover ~ label,
+    .star-rating input:checked ~ label { color: #ffc107; transform: scale(1.1); }
+
+    /* ─── Toast ─── */
+    #reviewToast { min-width: 320px; }
+
+    /* ─── Review Card ─── */
+    .review-card {
+        border: none; border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06);
+        padding: 1.1rem 1.4rem;
+        transition: box-shadow .2s;
+    }
+    .review-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+
+    .sentiment-badge-positive {
+        background: #d1fae5; color: #065f46;
+        border-radius: 20px; padding: 2px 10px; font-size: .75rem; font-weight: 600;
+    }
+    .sentiment-badge-negative {
+        background: #fee2e2; color: #991b1b;
+        border-radius: 20px; padding: 2px 10px; font-size: .75rem; font-weight: 600;
+    }
+
+    /* ─── Rating Summary Bar ─── */
+    .rating-bar-fill { height: 8px; border-radius: 4px; background: #ffc107; }
+    .rating-bar-bg   { height: 8px; border-radius: 4px; background: #f0f0f0; flex: 1; overflow: hidden; }
+
+    /* ─── Write Review Box ─── */
+    .review-form-box {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+        border: 1.5px solid #bee3f8;
+        border-radius: 16px; padding: 1.5rem;
+    }
+
+    /* ─── Submit Button Loading ─── */
+    .btn-submit-review { min-width: 140px; }
+</style>
+}
+
+<div class="container py-5">
+    <!-- THÔNG TIN SẢN PHẨM -->
+    <div class="row bg-white rounded-4 shadow-sm p-4 mb-4">
+        <div class="col-md-5 text-center p-3 border-end">
+            @{
+                string detailRaw = Model.ImagePath ?? "";
+                string detailImg = (detailRaw.StartsWith("http://") || detailRaw.StartsWith("https://"))
+                    ? detailRaw : (string.IsNullOrEmpty(detailRaw) ? "" : "/images/" + detailRaw);
+            }
+            @if (!string.IsNullOrEmpty(detailImg))
+            {
+                <img src="@detailImg" class="img-fluid rounded" alt="@Model.ProductName" style="max-height: 400px;"
+                     onerror="this.onerror=null; this.src='https://placehold.co/400x400/f8f9fa/a1a1aa?text=No+Image';">
+            }
+            else
+            {
+                <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 300px;">
+                    <i class="bi bi-image text-muted" style="font-size: 5rem;"></i>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-7 ps-md-5">
+            <h2 class="fw-bold text-dark">@Model.ProductName</h2>
+            <p class="text-muted small">Mã SP: #@Model.ProductId | Thương hiệu: @(Model.Brand ?? "Đang cập nhật")</p>
+            <h3 class="text-danger fw-bold my-4">@((Model.Price ?? 0).ToString("N0")) đ</h3>
+
+            @if (reviews.Any())
+            {
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <i class="bi @(i <= Math.Round(avgRating) ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+                    }
+                    <span class="fw-bold">@avgRating.ToString("0.0")</span>
+                    <span class="text-muted small">(@reviews.Count đánh giá)</span>
+                </div>
+            }
+
+            <div class="bg-light p-3 rounded-3 mb-4">
+                <p class="mb-1 small"><i class="bi bi-shield-check text-primary me-2"></i>Bảo hành chính hãng 36 tháng.</p>
+                <p class="mb-0 small"><i class="bi bi-truck text-primary me-2"></i>Giao hàng miễn phí toàn quốc.</p>
+            </div>
+
+            @* ── Quantity Selector + Action Buttons ── *@
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="fw-semibold text-muted small">Số lượng:</span>
+                <div class="d-flex align-items-center border rounded-3 overflow-hidden" style="width:120px;">
+                    <button type="button" class="btn btn-light border-0 px-3 py-2 fw-bold" id="btnQtyMinus" onclick="changeQty(-1)">&#8722;</button>
+                    <input type="number" id="qty" value="1" min="1" max="99" class="form-control border-0 text-center fw-bold p-0" style="width:40px; box-shadow:none; font-size:.95rem;" readonly>
+                    <button type="button" class="btn btn-light border-0 px-3 py-2 fw-bold" id="btnQtyPlus" onclick="changeQty(1)">&#43;</button>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <button class="btn btn-primary btn-lg rounded-pill px-4 shadow fw-bold flex-grow-1" style="min-width:160px; background:#0065FF; border-color:#0065FF;"
+                    onclick="buyNow(@Model.ProductId)">
+                    <i class="bi bi-lightning-charge-fill me-2"></i>MUA NGAY
+                </button>
+                <button class="btn btn-outline-primary btn-lg rounded-pill px-4" style="border-color:#0065FF; color:#0065FF;"
+                    onclick="addToCartDetail(@Model.ProductId)">
+                    <i class="bi bi-cart-plus"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <button class="btn btn-warning btn-lg rounded-pill px-4 shadow fw-bold w-100 text-dark"
+                    data-bs-toggle="modal" data-bs-target="#installmentModal">
+                    <i class="bi bi-credit-card me-2"></i>MUA TRẢ GÓP 0% <br/>
+                    <small class="fw-normal" style="font-size: 0.8rem;">Duyệt hồ sơ nhanh chóng, tiện lợi</small>
+                </button>
+            </div>
+
+            @* ── Promotion Box ── *@
+            <div class="p-3 rounded-3 mb-3" style="background:#fff8f8; border:1.5px solid #ffe0e0;">
+                <div class="fw-bold mb-2 small" style="color:#e30019;"><i class="bi bi-gift-fill me-2"></i>Quyền lợi khi mua hàng</div>
+                <ul class="list-unstyled mb-0 small" style="color:#555;">
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Bảo hành chính hãng <strong>36 tháng</strong></li>
+                    <li class="mb-1"><i class="bi bi-truck text-primary me-2"></i>Giao hàng miễn phí toàn quốc</li>
+                    <li class="mb-1"><i class="bi bi-arrow-repeat text-warning me-2"></i>Đổi trả trong <strong>7 ngày</strong> nếu lỗi</li>
+                    <li><i class="bi bi-headset text-info me-2"></i>Hỗ trợ kỹ thuật 24/7</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- BÊN TRÁI: THÔNG SỐ & BÌNH LUẬN -->
+        <div class="col-lg-8">
+            <!-- THÔNG SỐ KỸ THUẬT -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h4 class="fw-bold border-start border-primary border-4 ps-3 mb-4">Thông số kỹ thuật</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0 spec-table">
+                        <tbody>
+                            <tr class="table-light">
+                                <td class="fw-semibold text-muted" style="width:38%">Thương hiệu</td>
+                                <td class="fw-bold">@(Model.Brand ?? "Đang cập nhật")</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Danh mục</td>
+                                <td>@(Model.Category?.CategoryName ?? "—")</td>
+                            </tr>
+
+                            @* ===== CPU SPECS ===== *@
+                            @if (Model.CpuSpec != null)
+                            {
+                                <tr class="table-primary">
+                                    <td colspan="2" class="fw-bold text-primary small py-2">
+                                        <i class="bi bi-cpu me-2"></i>THÔNG SỐ VI XỬ LÝ
+                                    </td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Socket</td>
+                                    <td><span class="badge bg-secondary">@Model.CpuSpec.SocketType</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Số nhân / Số luồng</td>
+                                    <td><strong>@(Model.CpuSpec.Cores ?? 0)</strong> nhân / <strong>@(Model.CpuSpec.Threads ?? 0)</strong> luồng</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Xung nhịp cơ bản</td>
+                                    <td>@(Model.CpuSpec.BaseClock?.ToString("0.0") ?? "—") GHz</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">TDP (Nhiệt năng)</td>
+                                    <td>@(Model.CpuSpec.Tdp?.ToString() ?? "—") W</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Đồ họa tích hợp</td>
+                                    <td>
+                                        @if (Model.CpuSpec.HasIntegratedGraphics == true)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Có</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Không</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+
+                            @* ===== GPU SPECS ===== *@
+                            @if (Model.GpuSpec != null)
+                            {
+                                <tr class="table-success">
+                                    <td colspan="2" class="fw-bold text-success small py-2">
+                                        <i class="bi bi-gpu-card me-2"></i>THÔNG SỐ CARD ĐỒ HỌA
+                                    </td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">VRAM</td>
+                                    <td><strong>@(Model.GpuSpec.VramSize ?? 0) GB</strong> GDDR6X</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Nguồn điện yêu cầu</td>
+                                    <td>@(Model.GpuSpec.PowerRequirement ?? 0) W</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Chiều dài card</td>
+                                    <td>@(Model.GpuSpec.Length ?? 0) mm</td>
+                                </tr>
+                            }
+
+                            @* ===== MAINBOARD SPECS ===== *@
+                            @if (Model.MainboardSpec != null)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="2" class="fw-bold text-warning-emphasis small py-2">
+                                        <i class="bi bi-motherboard me-2"></i>THÔNG SỐ MAINBOARD
+                                    </td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Socket</td>
+                                    <td><span class="badge bg-secondary">@Model.MainboardSpec.SocketType</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Chipset</td>
+                                    <td><strong>@(Model.MainboardSpec.Chipset ?? "—")</strong></td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Form Factor</td>
+                                    <td>@(Model.MainboardSpec.FormFactor ?? "—")</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Số khe RAM</td>
+                                    <td>@(Model.MainboardSpec.RamSlotCount ?? 0) khe</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">RAM tối đa</td>
+                                    <td>@(Model.MainboardSpec.MaxRamCapacity ?? 0) GB</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Loại RAM hỗ trợ</td>
+                                    <td><span class="badge bg-primary">@(Model.MainboardSpec.RamTypeSupported ?? "—")</span></td>
+                                </tr>
+                            }
+
+                            @* ===== RAM SPECS ===== *@
+                            @if (Model.RamSpec != null)
+                            {
+                                <tr class="table-info">
+                                    <td colspan="2" class="fw-bold text-info-emphasis small py-2">
+                                        <i class="bi bi-memory me-2"></i>THÔNG SỐ RAM
+                                    </td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Loại RAM</td>
+                                    <td><span class="badge bg-primary">@Model.RamSpec.RamType</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Dung lượng</td>
+                                    <td><strong>@(Model.RamSpec.Capacity ?? 0) GB</strong></td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold text-muted">Bus Speed</td>
+                                    <td>@(Model.RamSpec.BusSpeed ?? 0) MHz</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Latency (CAS)</td>
+                                    <td>@(Model.RamSpec.Latency ?? "—")</td>
+                                </tr>
+                            }
+
+                            @* Nếu không có spec nào *@
+                            @if (Model.CpuSpec == null && Model.GpuSpec == null && Model.MainboardSpec == null && Model.RamSpec == null)
+                            {
+                                <tr>
+                                    <td colspan="2" class="text-muted text-center py-3">
+                                        <i class="bi bi-info-circle me-2"></i>Thông số chi tiết đang được cập nhật...
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- BÌNH LUẬN -->
+            <div class="card border-0 shadow-sm rounded-4 p-4" id="review-form">
+                <h4 class="fw-bold mb-4">
+                    <i class="bi bi-chat-square-heart me-2 text-primary"></i>Đánh Giá Sản Phẩm
+                </h4>
+
+                @* === TASK 3: Form đánh giá với star rating & điều kiện đã mua === *@
+                @if (!User.Identity!.IsAuthenticated)
+                {
+                    <div class="alert alert-warning rounded-3 text-center mb-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Vui lòng
+                        <a href="/Account/Login" class="fw-bold">Đăng nhập</a> để để lại bình luận.
+                    </div>
+                }
+                else if (alreadyReviewed)
+                {
+                    <div class="alert alert-info rounded-3 mb-4 d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill fs-5"></i>
+                        <span>Bạn đã đánh giá sản phẩm này. Cảm ơn phản hồi của bạn!</span>
+                    </div>
+                }
+                else if (!hasPurchased)
+                {
+                    <div class="alert rounded-3 mb-4 d-flex align-items-center gap-2"
+                         style="background:#fff8e1; border: 1.5px solid #ffe082; color:#5d4037;">
+                        <i class="bi bi-lock-fill fs-5 text-warning"></i>
+                        <div>
+                            <strong>Chỉ khách hàng đã mua mới có thể đánh giá.</strong><br>
+                            <span class="small">Mua sản phẩm này để chia sẻ trải nghiệm của bạn!</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="review-form-box mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-pencil-square me-2 text-primary"></i>Viết đánh giá của bạn</h6>
+
+                        <!-- Star Rating Input -->
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted d-block mb-2">Chọn số sao:</label>
+                            <div class="star-rating" id="starRating">
+                                <input type="radio" name="rating" id="star5" value="5" checked>
+                                <label for="star5" title="5 sao - Xuất sắc">★</label>
+                                <input type="radio" name="rating" id="star4" value="4">
+                                <label for="star4" title="4 sao - Tốt">★</label>
+                                <input type="radio" name="rating" id="star3" value="3">
+                                <label for="star3" title="3 sao - Bình thường">★</label>
+                                <input type="radio" name="rating" id="star2" value="2">
+                                <label for="star2" title="2 sao - Tệ">★</label>
+                                <input type="radio" name="rating" id="star1" value="1">
+                                <label for="star1" title="1 sao - Rất tệ">★</label>
+                            </div>
+                            <small id="starLabel" class="text-muted mt-1 d-block">5 sao — Xuất sắc</small>
+                        </div>
+
+                        <textarea id="reviewContent" class="form-control mb-3" rows="3"
+                                  placeholder="Hãy chia sẻ trải nghiệm thực tế của bạn về sản phẩm..."></textarea>
+
+                        <button id="submitReviewBtn" onclick="postReview(@Model.ProductId)"
+                                class="btn btn-primary rounded-pill px-4 btn-submit-review">
+                            <i class="bi bi-send me-2"></i>Gửi đánh giá
+                        </button>
+                    </div>
+                }
+
+                <!-- Rating Summary (nếu có review) -->
+                @if (reviews.Any())
+                {
+                    <div class="p-3 rounded-3 mb-4" style="background:#f8f9fa;">
+                        <div class="row align-items-center">
+                            <div class="col-auto text-center">
+                                <div style="font-size: 3rem; font-weight: 800; color: #212529; line-height: 1;">@avgRating.ToString("0.0")</div>
+                                <div class="text-muted small">/ 5.0</div>
+                                <div>
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi @(i <= Math.Round(avgRating) ? "bi-star-fill text-warning" : "bi-star text-muted") small"></i>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="text-success fw-bold small"><i class="bi bi-emoji-smile"></i> Tích cực</span>
+                                    <div class="rating-bar-bg">
+                                        <div class="rating-bar-fill" style="background:#10b981; width:@(reviews.Any() ? (double)positiveCount / reviews.Count * 100 : 0)%"></div>
+                                    </div>
+                                    <span class="text-muted small">@positiveCount</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-danger fw-bold small"><i class="bi bi-emoji-frown"></i> Tiêu cực</span>
+                                    <div class="rating-bar-bg">
+                                        <div class="rating-bar-fill" style="background:#ef4444; width:@(reviews.Any() ? (double)negativeCount / reviews.Count * 100 : 0)%"></div>
+                                    </div>
+                                    <span class="text-muted small">@negativeCount</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- DANH SÁCH BÌNH LUẬN -->
+                <div class="review-list d-flex flex-column gap-3">
+                    @{
+                        var visibleReviews = reviews.Where(r => !r.IsHidden).ToList();
+                    }
+                    @if (visibleReviews.Any())
+                    {
+                        @foreach (var review in visibleReviews)
+                        {
+                            <div class="review-card">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+                                             style="width:38px; height:38px; font-weight:700; color:#0d6efd; font-size:.95rem;">
+                                            @(review.User?.UserName?.Substring(0, 1).ToUpper() ?? "?")
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold" style="font-size:.9rem;">@(review.User?.UserName ?? "Ẩn danh")</div>
+                                            <small class="text-muted">@review.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</small>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="mb-1">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="bi @(i <= (review.Rating ?? 5) ? "bi-star-fill text-warning" : "bi-star text-muted") small"></i>
+                                            }
+                                        </div>
+                                        @if (review.Sentiment == "Positive")
+                                        {
+                                            <span class="sentiment-badge-positive"><i class="bi bi-emoji-smile me-1"></i>Tích cực (AI)</span>
+                                        }
+                                        else if (review.Sentiment == "Negative")
+                                        {
+                                            <span class="sentiment-badge-negative"><i class="bi bi-emoji-frown me-1"></i>Tiêu cực (AI)</span>
+                                        }
+                                    </div>
+                                </div>
+                                <p class="mb-0 text-secondary" style="font-size:.9rem; line-height:1.6;">@review.Content</p>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-chat-square text-muted" style="font-size:3rem;"></i>
+                            <p class="text-muted mt-3">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- BÊN PHẢI -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-3">Chính sách ưu đãi</h5>
+                <ul class="list-unstyled mb-0 small">
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Giao hàng hỏa tốc 2h</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Đổi trả trong 7 ngày nếu lỗi</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Hỗ trợ lắp ráp tại nhà</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- === INSTALLMENT MODAL === -->
+<div class="modal fade" id="installmentModal" tabindex="-1" aria-labelledby="installmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-warning text-dark rounded-top-4 border-0">
+                <h5 class="modal-title fw-bold" id="installmentModalLabel">
+                    <i class="bi bi-calculator me-2"></i>Bảng Tính Trả Góp
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-semibold">Giá sản phẩm:</span>
+                    <span class="text-danger fw-bold fs-5" id="modalProductPrice" data-price="@Model.Price">@((Model.Price ?? 0).ToString("N0")) đ</span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Chọn mức trả trước:</label>
+                    <div class="d-flex gap-2">
+                        <input type="radio" class="btn-check installment-prepay" name="prepay" id="prepay10" value="10" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary flex-grow-1" for="prepay10">10%</label>
+
+                        <input type="radio" class="btn-check installment-prepay" name="prepay" id="prepay30" value="30" autocomplete="off">
+                        <label class="btn btn-outline-primary flex-grow-1" for="prepay30">30%</label>
+
+                        <input type="radio" class="btn-check installment-prepay" name="prepay" id="prepay50" value="50" autocomplete="off">
+                        <label class="btn btn-outline-primary flex-grow-1" for="prepay50">50%</label>
+
+                        <input type="radio" class="btn-check installment-prepay" name="prepay" id="prepay70" value="70" autocomplete="off">
+                        <label class="btn btn-outline-primary flex-grow-1" for="prepay70">70%</label>
+                    </div>
+                    <div class="text-end mt-2 text-muted small">
+                        Số tiền trả trước: <strong id="lblPrepayAmount">0 đ</strong>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Chọn kỳ hạn:</label>
+                    <div class="d-flex gap-2">
+                        <input type="radio" class="btn-check installment-term" name="term" id="term6" value="6" autocomplete="off" checked>
+                        <label class="btn btn-outline-success flex-grow-1" for="term6">6 Tháng</label>
+
+                        <input type="radio" class="btn-check installment-term" name="term" id="term12" value="12" autocomplete="off">
+                        <label class="btn btn-outline-success flex-grow-1" for="term12">12 Tháng</label>
+                    </div>
+                </div>
+
+                <div class="bg-light p-3 rounded-3 mb-4">
+                    <div class="d-flex justify-content-between mb-2 small text-muted">
+                        <span>Số tiền cần vay:</span>
+                        <span id="lblLoanAmount">0 đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 small text-muted border-bottom pb-2">
+                        <span>Phí chuyển đổi trả góp (2%):</span>
+                        <span id="lblFeeAmount">0 đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Góp mỗi tháng:</span>
+                        <span class="text-danger fw-bold fs-4" id="lblMonthlyPayment">0 đ</span>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-warning w-100 fw-bold py-3 fs-5 rounded-3 text-dark" onclick="submitInstallment(@Model.ProductId)" id="btnSubmitInstallment">
+                    <i class="bi bi-cart-check me-2"></i>ĐẶT HÀNG TRẢ GÓP
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- === TOAST NOTIFICATION === -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+    <div id="reviewToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold" id="toastMessage">
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ─── Quantity Selector ───
+    function changeQty(delta) {
+        const input = document.getElementById('qty');
+        let val = parseInt(input.value) + delta;
+        if (val < 1) val = 1;
+        if (val > 99) val = 99;
+        input.value = val;
+    }
+
+    // ─── Add to Cart (icon button) ───
+    async function addToCartDetail(productId) {
+        const qty = parseInt(document.getElementById('qty').value) || 1;
+        try {
+            const res = await fetch('/api/Cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: qty })
+            });
+            const data = await res.json();
+            showToast(res.ok ? `✅ Đã thêm ${qty} sản phẩm vào giỏ!` : `❌ ${data.message}`, res.ok ? 'success' : 'danger');
+        } catch {
+            showToast('❌ Lỗi kết nối. Vui lòng thử lại.', 'danger');
+        }
+    }
+
+    // ─── Buy Now ───
+    async function buyNow(productId) {
+        const qty = parseInt(document.getElementById('qty').value) || 1;
+        try {
+            const res = await fetch('/api/Cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: qty })
+            });
+            if (res.ok) {
+                window.location.href = '/Cart';
+            } else {
+                const data = await res.json();
+                showToast(`❌ ${data.message}`, 'danger');
+            }
+        } catch {
+            showToast('❌ Lỗi kết nối.', 'danger');
+        }
+    }
+
+
+    // ─── Star Rating Label ───
+    const starLabels = {
+        '1': '1 sao — Rất tệ 😞',
+        '2': '2 sao — Tệ 😕',
+        '3': '3 sao — Bình thường 😐',
+        '4': '4 sao — Tốt 😊',
+        '5': '5 sao — Xuất sắc 🤩'
+    };
+    document.querySelectorAll('.star-rating input').forEach(input => {
+        input.addEventListener('change', () => {
+            document.getElementById('starLabel').textContent = starLabels[input.value] || '';
+        });
+    });
+
+    // ─── Toast Helper ───
+    function showToast(message, type) {
+        const toast = document.getElementById('reviewToast');
+        const toastMsg = document.getElementById('toastMessage');
+        toastMsg.textContent = message;
+        toast.className = 'toast align-items-center border-0 shadow-lg text-white';
+        if (type === 'success') toast.classList.add('bg-success');
+        else if (type === 'danger')  toast.classList.add('bg-danger');
+        else if (type === 'warning') toast.classList.add('bg-warning');
+        const bsToast = new bootstrap.Toast(toast, { delay: 4500 });
+        bsToast.show();
+    }
+
+    // ─── Submit Review ───
+    function postReview(productId) {
+        const content = document.getElementById('reviewContent').value.trim();
+        const ratingInput = document.querySelector('.star-rating input:checked');
+        const rating = ratingInput ? parseInt(ratingInput.value) : 5;
+        const btn = document.getElementById('submitReviewBtn');
+
+        if (!content) {
+            showToast('⚠️ Vui lòng nhập nội dung đánh giá!', 'warning');
+            return;
+        }
+
+        // Loading state
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang phân tích AI...';
+
+        fetch('/Product/PostReview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId, content, rating })
+        })
+        .then(async response => {
+            const data = await response.json();
+            if (response.status === 401) {
+                showToast('🔒 Vui lòng đăng nhập!', 'warning');
+                window.location.href = '/Account/Login';
+                return;
+            }
+            if (!response.ok) {
+                showToast('❌ ' + (data.message || 'Có lỗi xảy ra.'), 'danger');
+                return;
+            }
+            const sentimentVn = data.sentiment === 'Positive' ? '😊 Tích cực' : '😞 Tiêu cực';
+            let msg = `✅ ${data.message} — AI nhận diện: ${sentimentVn}`;
+            if (data.autoHidden) {
+                msg += ' ⚠️ Sản phẩm đã bị ẩn khỏi gợi ý do nhiều đánh giá tiêu cực!';
+            }
+            showToast(msg, 'success');
+            setTimeout(() => location.reload(), 2000);
+        })
+        .catch(() => {
+            showToast('❌ Lỗi kết nối. Vui lòng thử lại.', 'danger');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send me-2"></i>Gửi đánh giá';
+        });
+    }
+
+    // ─── Installment Calculator ───
+    function formatCurrency(amount) {
+        return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " đ";
+    }
+
+    function calculateInstallment() {
+        const price = parseFloat(document.getElementById('modalProductPrice').getAttribute('data-price')) || 0;
+        if (price === 0) return;
+
+        const prepayPercent = parseFloat(document.querySelector('.installment-prepay:checked').value);
+        const term = parseFloat(document.querySelector('.installment-term:checked').value);
+
+        const prepayAmount = price * (prepayPercent / 100);
+        const loanAmount = price - prepayAmount;
+        const feeAmount = loanAmount * 0.02; // 2% fee
+        const totalLoan = loanAmount + feeAmount;
+        const monthlyPayment = totalLoan / term;
+
+        document.getElementById('lblPrepayAmount').textContent = formatCurrency(prepayAmount);
+        document.getElementById('lblLoanAmount').textContent = formatCurrency(loanAmount);
+        document.getElementById('lblFeeAmount').textContent = formatCurrency(feeAmount);
+        document.getElementById('lblMonthlyPayment').textContent = formatCurrency(monthlyPayment);
+    }
+
+    // Attach event listeners
+    document.querySelectorAll('.installment-prepay, .installment-term').forEach(el => {
+        el.addEventListener('change', calculateInstallment);
+    });
+
+    // Initialize calc when modal opens
+    const modalEl = document.getElementById('installmentModal');
+    if (modalEl) {
+        modalEl.addEventListener('shown.bs.modal', function () {
+            calculateInstallment();
+        });
+    }
+
+    // Submit Installment
+    async function submitInstallment(productId) {
+        const btn = document.getElementById('btnSubmitInstallment');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+        const prepayPercent = parseFloat(document.querySelector('.installment-prepay:checked').value);
+        const term = parseInt(document.querySelector('.installment-term:checked').value);
+
+        try {
+            const res = await fetch('/Cart/SetupInstallment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, prepaymentPercent: prepayPercent, months: term })
+            });
+
+            if (res.ok) {
+                window.location.href = '/Cart/Checkout';
+            } else {
+                const data = await res.json();
+                showToast(`❌ ${data.message || 'Lỗi thiết lập trả góp.'}`, 'danger');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-cart-check me-2"></i>ĐẶT HÀNG TRẢ GÓP';
+            }
+        } catch {
+            showToast('❌ Lỗi kết nối.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-cart-check me-2"></i>ĐẶT HÀNG TRẢ GÓP';
+        }
+    }
+</script>
+}

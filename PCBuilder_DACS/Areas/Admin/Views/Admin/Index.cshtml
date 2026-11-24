@@ -1,0 +1,199 @@
+@{
+    ViewData["Title"] = "Tổng Quan Hệ Thống";
+    int aiAlertCount = ViewBag.AiAlertCount ?? 0;
+    bool hasAlert = aiAlertCount > 0;
+}
+
+@section Styles {
+<style>
+    /* ─── Pulse animation cho AI Alert ─── */
+    @@keyframes pulse-red {
+        0%   { box-shadow: 0 0 0 0 rgba(220,53,69,.55); }
+        70%  { box-shadow: 0 0 0 12px rgba(220,53,69,0); }
+        100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+    }
+    .ai-alert-card { animation: pulse-red 1.8s infinite; }
+
+    @@keyframes count-pop {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(1.25); }
+        100% { transform: scale(1); }
+    }
+    .ai-alert-num { animation: count-pop 1s ease-in-out infinite; }
+
+    /* ─── Stat cards ─── */
+    .stat-card {
+        border: none; border-radius: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07);
+        transition: transform .2s, box-shadow .2s;
+        cursor: pointer;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+
+    .stat-icon-wrap {
+        width: 54px; height: 54px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+
+    /* ─── Quick Access buttons ─── */
+    .quick-btn {
+        border-radius: 12px; padding: .6rem 1.2rem;
+        font-weight: 600; font-size: .9rem;
+        transition: transform .15s, box-shadow .15s;
+    }
+    .quick-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+
+    /* ─── AI Alert Banner (khi có cảnh báo) ─── */
+    .ai-banner {
+        background: linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%);
+        border-radius: 14px; padding: 1rem 1.5rem;
+        color: white; margin-bottom: 1.5rem;
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .ai-banner-icon {
+        font-size: 2.2rem; animation: count-pop 1.2s ease-in-out infinite;
+    }
+</style>
+}
+
+<!-- Welcome Banner -->
+<div class="alert shadow-sm border-0 text-white mb-4"
+     style="background: linear-gradient(135deg, #198754 0%, #20c997 100%); border-radius:16px;">
+    <h4 class="alert-heading fw-bold mb-1">
+        <i class="bi bi-lightning-charge-fill text-warning"></i> Chào mừng ngài Chỉ huy!
+    </h4>
+    <p class="mb-0" style="opacity:.9;">
+        Đây là trung tâm đầu não của <strong>PC Builder AI</strong>. Tại đây, ngài có toàn quyền
+        sinh sát với mọi dữ liệu trong hệ thống. Hãy điều hành tốt nhé!
+    </p>
+</div>
+
+<!-- AI Alert Banner (chỉ hiện khi có cảnh báo) -->
+@if (hasAlert)
+{
+    <div class="ai-banner">
+        <div class="d-flex align-items-center gap-3">
+            <span class="ai-banner-icon">🚨</span>
+            <div>
+                <div class="fw-bold fs-5">Cảnh báo từ AI!</div>
+                <div style="opacity:.9; font-size:.9rem;">
+                    Có <strong>@aiAlertCount sản phẩm</strong> đang có tỷ lệ đánh giá tiêu cực &gt;70%.
+                    Hãy kiểm tra và xử lý ngay!
+                </div>
+            </div>
+        </div>
+        <a asp-area="Admin" asp-controller="ReviewsModeration" asp-action="Index"
+           class="btn btn-light fw-bold rounded-pill px-4 flex-shrink-0">
+            <i class="bi bi-arrow-right-circle me-1"></i>Xem ngay
+        </a>
+    </div>
+}
+
+<!-- Stat Cards -->
+<div class="row g-4 mb-4">
+    <!-- Tổng linh kiện -->
+    <div class="col-md-3">
+        <div class="card stat-card h-100" onclick="window.location.href='/Admin/Products'">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon-wrap" style="background:#dbeafe;">
+                    <i class="bi bi-cpu text-primary"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0 small fw-bold text-uppercase" style="letter-spacing:.5px;">Tổng Linh Kiện</p>
+                    <h2 class="fw-bold mb-0 text-primary">@ViewBag.TotalProducts</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Đơn đặt hàng -->
+    <div class="col-md-3">
+        <div class="card stat-card h-100" onclick="window.location.href='/Admin/Orders'">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon-wrap" style="background:#cffafe;">
+                    <i class="bi bi-cart-check text-info"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0 small fw-bold text-uppercase" style="letter-spacing:.5px;">Đơn Đặt Hàng</p>
+                    <h2 class="fw-bold mb-0 text-info">@ViewBag.TotalOrders</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cảnh báo AI -->
+    <div class="col-md-3">
+        <div class="card stat-card h-100 @(hasAlert ? "ai-alert-card" : "")"
+             style="@(hasAlert ? "border: 2px solid #dc3545 !important;" : "")"
+             onclick="window.location.href='/Admin/ReviewsModeration'">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon-wrap" style="background:@(hasAlert ? "#fee2e2" : "#fef3c7");">
+                    <i class="bi bi-robot @(hasAlert ? "text-danger" : "text-warning")"></i>
+                </div>
+                <div>
+                    <p class="@(hasAlert ? "text-danger" : "text-muted") mb-0 small fw-bold text-uppercase" style="letter-spacing:.5px;">
+                        Cảnh Báo AI
+                    </p>
+                    <h2 class="fw-bold mb-0 @(hasAlert ? "text-danger ai-alert-num" : "text-warning")">
+                        @aiAlertCount
+                    </h2>
+                    @if (hasAlert)
+                    {
+                        <div class="small text-danger fw-semibold" style="font-size:.72rem;">
+                            ⚠️ Cần xử lý ngay!
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Đã ẩn khỏi Shop -->
+    <div class="col-md-3">
+        <div class="card stat-card h-100" onclick="window.location.href='/Admin/ReviewsModeration'">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon-wrap" style="background:#fce7f3;">
+                    <i class="bi bi-eye-slash text-danger"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0 small fw-bold text-uppercase" style="letter-spacing:.5px;">Đã Ẩn Khỏi Shop</p>
+                    <h2 class="fw-bold mb-0 text-danger">@ViewBag.HiddenProducts</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Access -->
+<div class="row mt-2">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white fw-bold border-0 pt-3 pb-2 px-4">
+                <i class="bi bi-lightning me-2 text-primary"></i>Truy Cập Nhanh
+            </div>
+            <div class="card-body d-flex gap-3 flex-wrap px-4 pb-4">
+                <a asp-area="Admin" asp-controller="Products" asp-action="Create"
+                   class="btn btn-primary quick-btn">
+                    <i class="bi bi-plus-circle me-1"></i>Thêm Linh Kiện Mới
+                </a>
+                <a asp-area="Admin" asp-controller="Products" asp-action="Index"
+                   class="btn btn-outline-primary quick-btn">
+                    <i class="bi bi-box-seam me-1"></i>Quản Lý Kho
+                </a>
+                <a asp-area="Admin" asp-controller="Orders" asp-action="Index"
+                   class="btn btn-outline-info quick-btn">
+                    <i class="bi bi-cart-check me-1"></i>Quản Lý Đơn Hàng
+                </a>
+                <a asp-area="Admin" asp-controller="ReviewsModeration" asp-action="Index"
+                   class="btn @(hasAlert ? "btn-danger" : "btn-outline-warning") quick-btn">
+                    <i class="bi bi-robot me-1"></i>
+                    Kiểm Tra AI Feedback
+                    @if (hasAlert)
+                    {
+                        <span class="badge bg-white text-danger ms-1">@aiAlertCount</span>
+                    }
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

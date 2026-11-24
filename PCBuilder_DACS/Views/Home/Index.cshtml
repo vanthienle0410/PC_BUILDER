@@ -1,0 +1,310 @@
+@model PCBuilder_DACS.Models.ViewModels.HomeViewModel
+@{
+    ViewData["Title"] = "Trang Chủ - PC Builder AI";
+}
+
+@section Styles {
+    <style>
+        /* ─── Hero ─── */
+        .hero-banner {
+            background: linear-gradient(135deg, #001f4d 0%, #0041a8 60%, #0065FF 100%);
+            color: #ffffff;
+            border-radius: 18px;
+            padding: 72px 48px;
+            margin-top: 20px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-banner::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .hero-banner h1 { font-weight: 800; font-size: 2.8rem; text-shadow: 0 2px 16px rgba(0,0,0,0.3); }
+        .btn-cta {
+            background: linear-gradient(135deg, #ff6b35, #ff4500);
+            color: white; font-weight: 700;
+            padding: 14px 36px; border-radius: 50px; font-size: 1.05rem;
+            border: none; box-shadow: 0 4px 20px rgba(255,69,0,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,69,0,0.5); color: white; }
+
+        /* ─── Category Quick-Filter Bar ─── */
+        .cat-filter-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+        .cat-filter-bar::-webkit-scrollbar { display: none; }
+        .cat-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 18px; border-radius: 50px; font-size: 0.85rem; font-weight: 600;
+            white-space: nowrap; text-decoration: none;
+            background: #f1f5f9; color: #334155;
+            border: 1.5px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .cat-chip:hover, .cat-chip.active {
+            background: #0065FF; color: white; border-color: #0065FF;
+            box-shadow: 0 4px 12px rgba(0,101,255,0.25);
+        }
+        .cat-chip i { font-size: 1rem; }
+
+        /* ─── Section Headings ─── */
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .section-header-left { display: flex; align-items: center; gap: 12px; }
+        .section-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem; color: white;
+        }
+        .section-title { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin: 0; }
+        .section-subtitle { font-size: 0.78rem; color: #94a3b8; margin: 0; }
+        .btn-view-all {
+            font-size: 0.82rem; font-weight: 600; color: #0065FF;
+            text-decoration: none; padding: 6px 14px; border-radius: 20px;
+            border: 1.5px solid #0065FF; transition: all 0.2s;
+        }
+        .btn-view-all:hover { background: #0065FF; color: white; }
+    </style>
+}
+
+@await Html.PartialAsync("_HomeHero")
+
+<div class="container">
+
+    <!-- ƯU ĐÃI HOT -->
+    <div class="bg-white rounded-4 p-4 shadow-sm mb-4 mt-3">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0" style="color: #111;">ƯU ĐÃI HOT</h5>
+            <a href="#" class="text-decoration-none" style="font-size: 0.85rem; font-weight: 600; color: #0065FF;">Xem tất cả <i class="bi bi-chevron-right"></i></a>
+        </div>
+        <div class="row g-3 text-center">
+            <div class="col-4 col-md-2">
+                <a href="#" class="text-decoration-none text-dark d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3 mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-clock-fill fs-3 text-danger"></i>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">Giờ vàng giá sốc</span>
+                </a>
+            </div>
+            <div class="col-4 col-md-2">
+                <a href="#" class="text-decoration-none text-dark d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-mortarboard-fill fs-3 text-primary"></i>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">Ưu đãi HSSV</span>
+                </a>
+            </div>
+            <div class="col-4 col-md-2">
+                <a href="#" class="text-decoration-none text-dark d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-percent fs-3 text-success"></i>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">Trả góp 0%</span>
+                </a>
+            </div>
+            <div class="col-4 col-md-2">
+                <a href="#" class="text-decoration-none text-dark d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-dark bg-opacity-10 p-3 mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-apple fs-3 text-dark"></i>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">Apple Education</span>
+                </a>
+            </div>
+            <div class="col-4 col-md-2">
+                <a href="#" class="text-decoration-none text-dark d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-phone-fill fs-3 text-info"></i>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">Tải App PV</span>
+                </a>
+            </div>
+            <div class="col-4 col-md-2">
+                <a href="#" class="text-decoration-none text-dark d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-tags-fill fs-3 text-warning"></i>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">Xả kho trưng bày</span>
+                </a>
+            </div>
+        </div>
+    </div>    <!-- CATEGORY QUICK FILTER BAR -->
+    <div class="mb-4">
+        <div class="cat-filter-bar">
+            <a href="/Product" class="cat-chip active"><i class="bi bi-grid-3x3-gap"></i> Tất cả</a>
+            <a href="/Product?category=CPU" class="cat-chip"><i class="bi bi-cpu"></i> CPU</a>
+            <a href="/Product?category=GPU" class="cat-chip"><i class="bi bi-gpu-card"></i> Card màn hình</a>
+            <a href="/Product?category=RAM" class="cat-chip"><i class="bi bi-memory"></i> RAM</a>
+            <a href="/Product?category=Mainboard" class="cat-chip"><i class="bi bi-motherboard"></i> Mainboard</a>
+            <a href="/Product?category=Storage" class="cat-chip"><i class="bi bi-device-hdd"></i> Ổ cứng</a>
+            <a href="/Product?category=Case" class="cat-chip"><i class="bi bi-box2"></i> Case</a>
+            <a href="/Product?category=PSU" class="cat-chip"><i class="bi bi-plug"></i> Nguồn</a>
+            <a href="/Product?category=Cooler" class="cat-chip"><i class="bi bi-wind"></i> Tản nhiệt</a>
+        </div>
+    </div>
+
+    <!-- AI RECOMMENDATION -->
+    @if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        int currentUserId = 0;
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim != null) int.TryParse(userIdClaim.Value, out currentUserId);
+        @await Component.InvokeAsync("Recommendation", new { userId = currentUserId })
+    }
+    else
+    {
+        <div class="alert border-0 rounded-4 shadow-sm text-center py-4 mb-4"
+             style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-left: 4px solid #3b82f6 !important;">
+            <i class="bi bi-magic fs-3 d-block mb-2 text-primary"></i>
+            <strong>Cá nhân hóa trải nghiệm:</strong>
+            <a href="/Account/Login" class="text-decoration-none fw-bold text-primary">Đăng nhập</a>
+            ngay để nhận các gợi ý linh kiện phù hợp nhất từ AI!
+        </div>
+    }
+
+    <!-- SẢN PHẨM MỚI NHẤT -->
+    <div class="mt-2 mb-5">
+        <div class="section-header">
+            <div class="section-header-left">
+                <div class="section-icon" style="background: linear-gradient(135deg,#e11d48,#f43f5e);">
+                    <i class="bi bi-stars"></i>
+                </div>
+                <div>
+                    <p class="section-title">Sản phẩm mới nhất</p>
+                    <p class="section-subtitle">Vừa cập nhật · Hàng chính hãng</p>
+                </div>
+            </div>
+            <a href="/Product" class="btn-view-all">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+            @foreach (var p in Model.LatestProducts)
+            {
+                <div class="col">
+                    @await Html.PartialAsync("_ProductCard", p, new ViewDataDictionary(ViewData) { { "Badge", "Mới" }, { "BadgeColor", "danger" } })
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- TOP CPU -->
+    @if (Model.TopCPUs.Any())
+    {
+        <div class="mb-5">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="section-icon" style="background: linear-gradient(135deg,#0065FF,#3b82f6);">
+                        <i class="bi bi-cpu"></i>
+                    </div>
+                    <div>
+                        <p class="section-title">Top Vi xử lý (CPU)</p>
+                        <p class="section-subtitle">Intel · AMD · Hiệu năng cao</p>
+                    </div>
+                </div>
+                <a href="/Product?category=CPU" class="btn-view-all">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+            <div class="row row-cols-2 row-cols-md-4 g-3">
+                @foreach (var p in Model.TopCPUs)
+                {
+                    <div class="col">
+                        @await Html.PartialAsync("_ProductCard", p, new ViewDataDictionary(ViewData) { { "Badge", "Hot" }, { "BadgeColor", "warning text-dark" } })
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- TOP VGA -->
+    @if (Model.TopVGAs.Any())
+    {
+        <div class="mb-5">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="section-icon" style="background: linear-gradient(135deg,#059669,#10b981);">
+                        <i class="bi bi-gpu-card"></i>
+                    </div>
+                    <div>
+                        <p class="section-title">Top Card màn hình (VGA)</p>
+                        <p class="section-subtitle">NVIDIA RTX · AMD Radeon · GDDR7</p>
+                    </div>
+                </div>
+                <a href="/Product?category=GPU" class="btn-view-all">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+            <div class="row row-cols-2 row-cols-md-4 g-3">
+                @foreach (var p in Model.TopVGAs)
+                {
+                    <div class="col">
+                        @await Html.PartialAsync("_ProductCard", p, new ViewDataDictionary(ViewData) { { "Badge", "Hot" }, { "BadgeColor", "warning text-dark" } })
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- TOP RAM -->
+    @if (Model.TopRAMs.Any())
+    {
+        <div class="mb-5">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="section-icon" style="background: linear-gradient(135deg,#7c3aed,#a855f7);">
+                        <i class="bi bi-memory"></i>
+                    </div>
+                    <div>
+                        <p class="section-title">Top RAM</p>
+                        <p class="section-subtitle">DDR4 · DDR5 · Tốc độ cao</p>
+                    </div>
+                </div>
+                <a href="/Product?category=RAM" class="btn-view-all">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+            <div class="row row-cols-2 row-cols-md-4 g-3">
+                @foreach (var p in Model.TopRAMs)
+                {
+                    <div class="col">
+                        @await Html.PartialAsync("_ProductCard", p, new ViewDataDictionary(ViewData) { { "Badge", "Mới" }, { "BadgeColor", "primary" } })
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- TOP MAINBOARD -->
+    @if (Model.TopMainboards.Any())
+    {
+        <div class="mb-5">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="section-icon" style="background: linear-gradient(135deg,#d97706,#f59e0b);">
+                        <i class="bi bi-motherboard"></i>
+                    </div>
+                    <div>
+                        <p class="section-title">Top Mainboard</p>
+                        <p class="section-subtitle">ASUS · MSI · Gigabyte · Intel &amp; AMD</p>
+                    </div>
+                </div>
+                <a href="/Product?category=Mainboard" class="btn-view-all">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+            <div class="row row-cols-2 row-cols-md-4 g-3">
+                @foreach (var p in Model.TopMainboards)
+                {
+                    <div class="col">
+                        @await Html.PartialAsync("_ProductCard", p, new ViewDataDictionary(ViewData) { { "Badge", "Hot" }, { "BadgeColor", "warning text-dark" } })
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- CTA BANNER -->
+    <div class="rounded-4 p-4 mb-5 text-center"
+         style="background: linear-gradient(135deg,#0f172a,#1e293b); color: white;">
+        <i class="bi bi-cpu-fill fs-1 mb-3 d-block" style="color: #60a5fa;"></i>
+        <h4 class="fw-bold mb-2">Không biết chọn linh kiện nào?</h4>
+        <p class="text-white-50 mb-3">Để AI của chúng tôi tự động tư vấn bộ PC phù hợp với ngân sách và nhu cầu của bạn.</p>
+        <a href="/Home/BuildPC" class="btn btn-cta px-5">
+            <i class="bi bi-robot me-2"></i>Xây dựng PC với AI
+        </a>
+    </div>
+</div>

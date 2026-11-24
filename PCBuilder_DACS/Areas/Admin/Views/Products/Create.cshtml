@@ -1,0 +1,81 @@
+@model PCBuilder_DACS.Models.ViewModels.ProductFormViewModel
+@{
+    ViewData["Title"] = "Thêm Linh Kiện Mới";
+}
+
+<div class="d-flex align-items-center mb-4">
+    <a asp-action="Index" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Thêm Linh Kiện Mới</h4>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="ProductName" class="form-label fw-semibold">Tên Linh Kiện <span class="text-danger">*</span></label>
+                    <input asp-for="ProductName" class="form-control" placeholder="Ví dụ: Intel Core i7-14700K" />
+                    <span asp-validation-for="ProductName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Brand" class="form-label fw-semibold">Thương Hiệu</label>
+                    <input asp-for="Brand" class="form-control" placeholder="Intel, AMD, NVIDIA..." />
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="CategoryId" class="form-label fw-semibold">Danh Mục <span class="text-danger">*</span></label>
+                    <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                        <option value="">-- Chọn Danh Mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Price" class="form-label fw-semibold">Giá (VNĐ)</label>
+                    <input asp-for="Price" class="form-control" type="number" placeholder="0" />
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold">Hình Ảnh Linh Kiện</label>
+                    <input type="file" name="imageFile" class="form-control" accept="image/*"
+                           onchange="previewImage(this)" />
+                    <small class="text-muted">Định dạng hỗ trợ: JPG, PNG, WEBP. Tối đa 5MB.</small>
+                    <div class="mt-2">
+                        <img id="imagePreview" src="#" alt="Preview" class="rounded border d-none"
+                             style="max-height:200px;max-width:300px;object-fit:contain;" />
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-save me-1"></i> Lưu Linh Kiện
+                </button>
+                <a asp-action="Index" class="btn btn-light">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('imagePreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+}

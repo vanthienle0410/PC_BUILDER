@@ -1,0 +1,88 @@
+@model PCBuilder_DACS.Models.ViewModels.ProductFormViewModel
+@{
+    ViewData["Title"] = "Sửa Linh Kiện";
+}
+
+<div class="d-flex align-items-center mb-4">
+    <a asp-action="Index" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2 text-warning"></i>Sửa Linh Kiện #@Model.ProductId</h4>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="ProductId" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="ProductName" class="form-label fw-semibold">Tên Linh Kiện <span class="text-danger">*</span></label>
+                    <input asp-for="ProductName" class="form-control" />
+                    <span asp-validation-for="ProductName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Brand" class="form-label fw-semibold">Thương Hiệu</label>
+                    <input asp-for="Brand" class="form-control" />
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="CategoryId" class="form-label fw-semibold">Danh Mục <span class="text-danger">*</span></label>
+                    <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select"></select>
+                    <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Price" class="form-label fw-semibold">Giá (VNĐ)</label>
+                    <input asp-for="Price" class="form-control" type="number" />
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold">Hình Ảnh</label>
+                    @if (!string.IsNullOrEmpty(Model.ImagePath))
+                    {
+                        <div class="mb-2">
+                            <span class="text-muted small">Ảnh hiện tại:</span><br />
+                            <img src="@Model.ImagePath" class="rounded border mt-1"
+                                 style="max-height:150px;max-width:250px;object-fit:contain;" />
+                        </div>
+                    }
+                    <input type="file" name="imageFile" class="form-control" accept="image/*"
+                           onchange="previewImage(this)" />
+                    <small class="text-muted">Để trống nếu muốn giữ nguyên ảnh cũ.</small>
+                    <div class="mt-2">
+                        <img id="imagePreview" src="#" alt="Preview" class="rounded border d-none"
+                             style="max-height:200px;max-width:300px;object-fit:contain;" />
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-warning px-4">
+                    <i class="bi bi-save me-1"></i> Lưu Thay Đổi
+                </button>
+                <a asp-action="Index" class="btn btn-light">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('imagePreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,297 @@
+@* ─── AI Product Recommendation Chatbox ─── *@
+<style>
+/* ── Trigger Button ── */
+.ai-chat-trigger {
+    position: fixed; bottom: 220px; right: 24px; z-index: 9998;
+    width: 56px; height: 56px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg, #0065FF, #0040CC);
+    color: #fff; font-size: 1.5rem; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,101,255,.45);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+    animation: pv-slide-up .5s .6s cubic-bezier(.34,1.56,.64,1) both;
+}
+.ai-chat-trigger:hover { transform: scale(1.12); box-shadow: 0 8px 28px rgba(0,101,255,.55); }
+.ai-chat-trigger .ai-badge {
+    position: absolute; top: -4px; right: -4px; width: 18px; height: 18px;
+    background: #e30019; border-radius: 50%; border: 2px solid #fff;
+    font-size: .62rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    animation: pulse-badge 1.8s ease-in-out infinite;
+}
+@@keyframes pulse-badge { 0%,100%{transform:scale(1)}50%{transform:scale(1.25)} }
+
+/* ── Chat Window ── */
+.ai-chat-window {
+    position: fixed; bottom: 290px; right: 24px; z-index: 9998;
+    width: 360px; max-height: 540px;
+    background: #fff; border-radius: 20px;
+    box-shadow: 0 12px 48px rgba(0,0,0,.18);
+    display: flex; flex-direction: column; overflow: hidden;
+    transform: translateY(20px) scale(.95); opacity: 0;
+    pointer-events: none;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
+}
+.ai-chat-window.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: all; }
+
+/* Header */
+.ai-chat-header {
+    background: linear-gradient(135deg, #0065FF, #0040CC);
+    padding: 14px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.ai-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+.ai-header-info { flex: 1; }
+.ai-header-info h6 { margin: 0; color: #fff; font-weight: 700; font-size: .9rem; }
+.ai-header-info span { color: rgba(255,255,255,.8); font-size: .72rem; }
+.ai-header-info span::before { content:'●'; color:#4ade80; margin-right:4px; }
+.ai-close-btn { background: rgba(255,255,255,.2); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: background .2s; }
+.ai-close-btn:hover { background: rgba(255,255,255,.35); }
+
+/* Messages */
+.ai-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+.ai-messages::-webkit-scrollbar { width: 4px; }
+.ai-messages::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+/* Bubble */
+.ai-bubble { display: flex; gap: 8px; align-items: flex-end; animation: fadeUp .3s ease; }
+@@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.ai-bubble.user { flex-direction: row-reverse; }
+.ai-bubble-icon { width: 28px; height: 28px; border-radius: 50%; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0; }
+.ai-bubble-text { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: .83rem; line-height: 1.5; }
+.ai-bubble.bot .ai-bubble-text { background: #f1f5f9; color: #1e293b; border-bottom-left-radius: 4px; }
+.ai-bubble.user .ai-bubble-text { background: linear-gradient(135deg, #0065FF, #0055DD); color: #fff; border-bottom-right-radius: 4px; }
+
+/* Typing indicator */
+.typing-indicator { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+.typing-indicator span { width: 7px; height: 7px; background: #94a3b8; border-radius: 50%; animation: typing 1.2s ease-in-out infinite; }
+.typing-indicator span:nth-child(2) { animation-delay: .2s; }
+.typing-indicator span:nth-child(3) { animation-delay: .4s; }
+@@keyframes typing { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
+
+/* Product Carousel */
+.ai-product-carousel { overflow-x: auto; display: flex; gap: 10px; padding: 4px 2px 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.ai-product-carousel::-webkit-scrollbar { height: 3px; }
+.ai-product-carousel::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+.ai-mini-card {
+    flex-shrink: 0; width: 140px; background: #fff; border: 1.5px solid #e2e8f0;
+    border-radius: 12px; overflow: hidden; scroll-snap-align: start;
+    transition: transform .2s, box-shadow .2s; text-decoration: none; color: inherit;
+    display: block;
+}
+.ai-mini-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,.12); border-color: #0065FF; }
+.ai-mini-card img { width: 100%; height: 100px; object-fit: contain; background: #f8fafc; padding: 8px; }
+.ai-mini-card-body { padding: 8px; }
+.ai-mini-card-name { font-size: .72rem; font-weight: 600; color: #334155; line-height: 1.3; display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; margin-bottom: 4px; }
+.ai-mini-card-price { font-size: .78rem; font-weight: 800; color: #e30019; }
+.ai-mini-card-badge { display: inline-block; font-size: .62rem; font-weight: 700; padding: 2px 6px; border-radius: 20px; margin-bottom: 4px; }
+.badge-best { background: #fef9c3; color: #a16207; }
+.badge-save { background: #dcfce7; color: #166534; }
+.badge-game { background: #ede9fe; color: #6d28d9; }
+
+/* Quick Replies */
+.ai-quick-replies { padding: 8px 14px; display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid #f1f5f9; flex-shrink: 0; }
+.ai-qr-btn { padding: 5px 12px; border-radius: 20px; border: 1.5px solid #bfdbfe; background: #eff6ff; color: #0065FF; font-size: .75rem; font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; }
+.ai-qr-btn:hover { background: #0065FF; color: #fff; }
+
+/* Input */
+.ai-input-area { padding: 10px 12px; border-top: 1px solid #f1f5f9; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.ai-input { flex: 1; border: 1.5px solid #e2e8f0; border-radius: 24px; padding: 8px 14px; font-size: .83rem; outline: none; transition: border-color .2s; font-family: 'Be Vietnam Pro', sans-serif; }
+.ai-input:focus { border-color: #0065FF; }
+.ai-send-btn { width: 36px; height: 36px; border-radius: 50%; background: #0065FF; border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, transform .2s; flex-shrink: 0; }
+.ai-send-btn:hover { background: #0040CC; transform: scale(1.08); }
+
+@@media (max-width: 480px) {
+    .ai-chat-window { width: calc(100vw - 20px); right: 10px; bottom: 270px; }
+    .ai-chat-trigger { right: 14px; bottom: 210px; }
+}
+</style>
+
+<!-- Trigger Button -->
+<button id="aiChatTrigger" class="ai-chat-trigger" aria-label="Tư vấn AI">
+    🤖
+    <span class="ai-badge">AI</span>
+</button>
+
+<!-- Chat Window -->
+<div id="aiChatWindow" class="ai-chat-window">
+    <!-- Header -->
+    <div class="ai-chat-header">
+        <div class="ai-avatar">🤖</div>
+        <div class="ai-header-info">
+            <h6>Tư vấn viên AI</h6>
+            <span>Trực tuyến</span>
+        </div>
+        <button id="aiCloseBtn" class="ai-close-btn" aria-label="Đóng">✕</button>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="ai-messages" id="aiMessages"></div>
+
+    <!-- Quick Replies -->
+    <div class="ai-quick-replies" id="aiQuickReplies">
+        <button class="ai-qr-btn" data-msg="PC gaming 20 triệu">🎮 PC 20tr</button>
+        <button class="ai-qr-btn" data-msg="Laptop văn phòng dưới 15 triệu">💼 Laptop 15tr</button>
+        <button class="ai-qr-btn" data-msg="PC đồ họa 25 triệu">🎨 Đồ họa 25tr</button>
+        <button class="ai-qr-btn" data-msg="Cần tư vấn thêm">❓ Tư vấn thêm</button>
+    </div>
+
+    <!-- Input -->
+    <div class="ai-input-area">
+        <input id="aiInput" class="ai-input" type="text" placeholder="Nhập ngân sách hoặc nhu cầu..." autocomplete="off">
+        <button id="aiSendBtn" class="ai-send-btn" aria-label="Gửi">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+(function () {
+    const trigger = document.getElementById('aiChatTrigger');
+    const window_ = document.getElementById('aiChatWindow');
+    const closeBtn = document.getElementById('aiCloseBtn');
+    const messagesEl = document.getElementById('aiMessages');
+    const input = document.getElementById('aiInput');
+    const sendBtn = document.getElementById('aiSendBtn');
+
+    // ─── Mock Product Data ───
+    const mockProducts = {
+        gaming20: [
+            { name: 'PC Gaming Core i5-12400F / RTX 3060 / 16GB', price: '19.890.000đ', img: 'https://placehold.co/140x100/0065FF/white?text=PC+Gaming', badge: 'Tốt nhất', badgeClass: 'badge-best', url: '/Products?category=CPU&brand=Intel' },
+            { name: 'PC Gaming Ryzen 5 5600 / RX 6700 XT / 16GB', price: '18.500.000đ', img: 'https://placehold.co/140x100/7c3aed/white?text=AMD+Build', badge: 'Tiết kiệm', badgeClass: 'badge-save', url: '/Products?category=CPU&brand=AMD' },
+            { name: 'PC Gaming i5-13400F / RTX 4060 / 16GB', price: '20.500.000đ', img: 'https://placehold.co/140x100/059669/white?text=RTX+4060', badge: 'Gaming', badgeClass: 'badge-game', url: '/Products?category=GPU' }
+        ],
+        laptop15: [
+            { name: 'Laptop Dell Inspiron 15 i5-1235U / 8GB / 512GB', price: '14.990.000đ', img: 'https://placehold.co/140x100/0065FF/white?text=Dell', badge: 'Tốt nhất', badgeClass: 'badge-best', url: '/Products?category=Laptop&brand=Dell' },
+            { name: 'Laptop Asus VivoBook 15 i5 / 8GB / 512GB', price: '13.490.000đ', img: 'https://placehold.co/140x100/d97706/white?text=ASUS', badge: 'Tiết kiệm', badgeClass: 'badge-save', url: '/Products?category=Laptop&brand=Asus' },
+            { name: 'Laptop Lenovo IdeaPad Slim 5 i5 / 16GB', price: '14.500.000đ', img: 'https://placehold.co/140x100/0891b2/white?text=Lenovo', badge: 'Văn phòng', badgeClass: 'badge-game', url: '/Products?category=Laptop&brand=Lenovo' }
+        ],
+        design25: [
+            { name: 'PC Đồ họa i7-13700F / RTX 4070 / 32GB / SSD 1TB', price: '24.900.000đ', img: 'https://placehold.co/140x100/6d28d9/white?text=Design+PC', badge: 'Tốt nhất', badgeClass: 'badge-best', url: '/Products?category=GPU&brand=Nvidia' },
+            { name: 'PC Đồ họa Ryzen 7 7700X / RX 7700 XT / 32GB', price: '23.500.000đ', img: 'https://placehold.co/140x100/dc2626/white?text=AMD+Design', badge: 'Tiết kiệm', badgeClass: 'badge-save', url: '/Products?category=GPU&brand=AMD' }
+        ]
+    };
+
+    // ─── Build product carousel HTML ───
+    function buildCarousel(products) {
+        const cards = products.map(p => `
+            <a href="${p.url}" class="ai-mini-card" target="_blank" rel="noopener">
+                <img src="${p.img}" alt="${p.name}" onerror="this.onerror=null; this.src='https://placehold.co/140x100/f1f5f9/94a3b8?text=No+Image'">
+                <div class="ai-mini-card-body">
+                    <div class="ai-mini-card-badge ${p.badgeClass}">${p.badge}</div>
+                    <div class="ai-mini-card-name">${p.name}</div>
+                    <div class="ai-mini-card-price">${p.price}</div>
+                </div>
+            </a>`).join('');
+        return `<div class="ai-product-carousel">${cards}</div>
+                <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+                    <a href="/Products" style="font-size:.74rem; color:#0065FF; text-decoration:none; font-weight:600;">📦 Xem tất cả sản phẩm →</a>
+                    <a href="/Home/BuildPC" style="font-size:.74rem; color:#059669; text-decoration:none; font-weight:600;">🔧 Mở PC Builder →</a>
+                </div>`;
+    }
+
+    // ─── Append message ───
+    function appendMessage(sender, content, isHTML = false) {
+        const wrap = document.createElement('div');
+        wrap.className = `ai-bubble ${sender}`;
+        const icon = document.createElement('div');
+        icon.className = 'ai-bubble-icon';
+        icon.textContent = sender === 'bot' ? '🤖' : '👤';
+        const text = document.createElement('div');
+        text.className = 'ai-bubble-text';
+        if (isHTML) text.innerHTML = content;
+        else text.textContent = content;
+        wrap.appendChild(icon);
+        wrap.appendChild(text);
+        messagesEl.appendChild(wrap);
+        scrollToBottom();
+    }
+
+    // ─── Typing indicator ───
+    function showTyping() {
+        const wrap = document.createElement('div');
+        wrap.className = 'ai-bubble bot'; wrap.id = 'typingBubble';
+        wrap.innerHTML = '<div class="ai-bubble-icon">🤖</div><div class="ai-bubble-text"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        messagesEl.appendChild(wrap);
+        scrollToBottom();
+    }
+    function hideTyping() {
+        const el = document.getElementById('typingBubble');
+        if (el) el.remove();
+    }
+
+    function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+    // ─── Mock AI Response Logic ───
+    function getResponse(msg) {
+        const m = msg.toLowerCase();
+        const budget = m.match(/(\d+)\s*(tr|triệu|000)/);
+        const amount = budget ? parseInt(budget[1]) : null;
+
+        if (m.includes('gaming') && (m.includes('20') || (amount && amount >= 18 && amount <= 22))) {
+            return { text: '🎮 Với ngân sách ~20 triệu, đây là 3 cấu hình PC Gaming được yêu thích nhất hiện tại:', cards: mockProducts.gaming20 };
+        }
+        if (m.includes('laptop') || m.includes('15 tr') || (amount && amount >= 13 && amount <= 16)) {
+            return { text: '💼 Dưới 15 triệu, những chiếc laptop văn phòng này rất được khuyên dùng:', cards: mockProducts.laptop15 };
+        }
+        if (m.includes('đồ họa') || m.includes('design') || m.includes('25 tr') || (amount && amount >= 23 && amount <= 27)) {
+            return { text: '🎨 Với 25 triệu, đây là cấu hình PC đồ họa hiệu năng cao:', cards: mockProducts.design25 };
+        }
+        if (m.includes('tư vấn') || m.includes('giúp') || m.includes('xin') || m.includes('?')) {
+            return { text: 'Chào bạn! Tôi có thể giúp bạn tìm PC/Laptop phù hợp. Hãy cho tôi biết ngân sách và mục đích sử dụng nhé! 😊', cards: null };
+        }
+        if (amount) {
+            if (amount < 10) return { text: `Với ngân sách ${amount}tr, bạn có thể xem các laptop/PC văn phòng cơ bản. Bấm "Laptop 15tr" để xem gợi ý tốt nhất!`, cards: null };
+            if (amount >= 10 && amount < 18) return { text: `Với ${amount}tr, tôi gợi ý laptop văn phòng hoặc PC cấu hình tầm trung. Bạn muốn PC hay Laptop?`, cards: mockProducts.laptop15 };
+            if (amount >= 18 && amount <= 25) return { text: `Tuyệt! ${amount}tr là ngân sách rất ổn cho PC Gaming. Đây là gợi ý cho bạn:`, cards: mockProducts.gaming20 };
+            return { text: `Với ${amount}tr, bạn có thể build PC đồ họa/gaming cao cấp! Đây là một số gợi ý:`, cards: mockProducts.design25 };
+        }
+        return { text: 'Bạn có thể cho tôi biết ngân sách và mục đích sử dụng (gaming, văn phòng, đồ họa...) không? Tôi sẽ gợi ý phù hợp nhất! 😊', cards: null };
+    }
+
+    // ─── Send message ───
+    function sendMessage(text) {
+        const msg = text || input.value.trim();
+        if (!msg) return;
+        input.value = '';
+        appendMessage('user', msg);
+        showTyping();
+        setTimeout(() => {
+            hideTyping();
+            const response = getResponse(msg);
+            appendMessage('bot', response.text);
+            if (response.cards) {
+                setTimeout(() => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'ai-bubble bot'; wrap.style.display='block';
+                    wrap.innerHTML = `<div class="ai-bubble-text" style="max-width:100%; background:transparent; padding:0 0 0 36px;">${buildCarousel(response.cards)}</div>`;
+                    messagesEl.appendChild(wrap);
+                    scrollToBottom();
+                }, 300);
+            }
+        }, 1400);
+    }
+
+    // ─── Toggle ───
+    function openChat() { window_.classList.add('open'); }
+    function closeChat() { window_.classList.remove('open'); }
+
+    trigger.addEventListener('click', () => window_.classList.contains('open') ? closeChat() : openChat());
+    closeBtn.addEventListener('click', closeChat);
+    sendBtn.addEventListener('click', () => sendMessage());
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+    // Quick replies
+    document.querySelectorAll('.ai-qr-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            openChat();
+            sendMessage(btn.dataset.msg);
+        });
+    });
+
+    // ─── Welcome message on load ───
+    setTimeout(() => {
+        appendMessage('bot', '👋 Xin chào! Tôi là Tư vấn viên AI của PC Builder. Bạn cần tìm PC hay Laptop trong tầm giá bao nhiêu? Hoặc bấm nhanh vào các gợi ý bên dưới!');
+    }, 1000);
+})();
+</script>

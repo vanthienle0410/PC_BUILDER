@@ -1,0 +1,254 @@
+@model IEnumerable<PCBuilder_DACS.Areas.Admin.Controllers.ProductReviewAlertViewModel>
+
+@{
+    ViewData["Title"] = "AI Feedback Loop — Kiểm Soát Đánh Giá";
+
+    int totalWithReviews = Model.Count();
+    int highRiskCount    = Model.Count(p => p.NegativePercentage > 60);
+    int autoHiddenCount  = Model.Count(p => p.IsHiddenFromRecommendation);
+}
+
+@section Styles {
+<style>
+    /* ─── Page Header ─── */
+    .page-header-ai {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+        border-radius: 20px;
+        padding: 2rem 2.5rem;
+        color: white;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .page-header-ai::after {
+        content: "🤖";
+        position: absolute;
+        right: 2rem; top: 50%;
+        transform: translateY(-50%);
+        font-size: 5rem;
+        opacity: .15;
+    }
+
+    /* ─── Summary Cards ─── */
+    .ai-stat-card {
+        border: none;
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07);
+        transition: transform .2s, box-shadow .2s;
+    }
+    .ai-stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .ai-stat-icon {
+        width: 52px; height: 52px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; flex-shrink: 0;
+    }
+    .ai-stat-num { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .ai-stat-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; color: #6c757d; letter-spacing: .5px; }
+
+    /* ─── Table ─── */
+    .ai-table { border-collapse: separate; border-spacing: 0 6px; }
+    .ai-table thead th {
+        background: #f8f9fa; font-size: .75rem; text-transform: uppercase;
+        letter-spacing: .6px; color: #6c757d; border: none; padding: .75rem 1rem;
+    }
+    .ai-table thead th:first-child { border-radius: 10px 0 0 10px; }
+    .ai-table thead th:last-child  { border-radius: 0 10px 10px 0; }
+
+    .ai-table tbody tr {
+        background: white;
+        box-shadow: 0 1px 6px rgba(0,0,0,.05);
+        border-radius: 12px;
+        transition: box-shadow .2s;
+    }
+    .ai-table tbody tr:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .ai-table tbody td { border: none; padding: .85rem 1rem; vertical-align: middle; }
+    .ai-table tbody td:first-child { border-radius: 12px 0 0 12px; }
+    .ai-table tbody td:last-child  { border-radius: 0 12px 12px 0; }
+
+    /* ─── Progress Bar ─── */
+    .neg-bar-bg {
+        height: 10px; border-radius: 5px; background: #f0f0f0;
+        overflow: hidden; min-width: 100px;
+    }
+    .neg-bar-fill {
+        height: 100%; border-radius: 5px;
+        transition: width .6s ease;
+    }
+
+    /* ─── Pulse badge ─── */
+    @@keyframes pulse-danger {
+        0%   { box-shadow: 0 0 0 0 rgba(220,53,69,.5); }
+        70%  { box-shadow: 0 0 0 8px rgba(220,53,69,0); }
+        100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+    }
+    .badge-pulse { animation: pulse-danger 1.6s infinite; }
+
+    /* ─── Status badges ─── */
+    .status-shown  { background:#d1fae5; color:#065f46; border-radius:20px; padding:3px 12px; font-size:.75rem; font-weight:600; }
+    .status-hidden { background:#fee2e2; color:#991b1b; border-radius:20px; padding:3px 12px; font-size:.75rem; font-weight:600; }
+</style>
+}
+
+<div class="page-header-ai">
+    <h3 class="fw-bold mb-1"><i class="bi bi-robot me-2"></i>AI Feedback Loop</h3>
+    <p class="mb-0 opacity-75">Hệ thống tự động phân tích cảm xúc đánh giá và kiểm soát gợi ý sản phẩm</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="ai-stat-card" style="background:#f0f7ff;">
+            <div class="ai-stat-icon" style="background:#dbeafe;">
+                <i class="bi bi-chat-dots-fill text-primary"></i>
+            </div>
+            <div>
+                <div class="ai-stat-num text-primary">@totalWithReviews</div>
+                <div class="ai-stat-label">Sản phẩm có đánh giá</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="ai-stat-card" style="background:#fff7ed;">
+            <div class="ai-stat-icon" style="background:#fed7aa;">
+                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            </div>
+            <div>
+                <div class="ai-stat-num text-warning">@highRiskCount</div>
+                <div class="ai-stat-label">Nguy cơ cao (&gt;60% tiêu cực)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="ai-stat-card" style="background:#fff1f2;">
+            <div class="ai-stat-icon" style="background:#fecdd3;">
+                <i class="bi bi-eye-slash-fill text-danger"></i>
+            </div>
+            <div>
+                <div class="ai-stat-num text-danger">@autoHiddenCount</div>
+                <div class="ai-stat-label">Đang ẩn khỏi gợi ý</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-header bg-white border-0 pt-3 pb-2 px-4 d-flex align-items-center justify-content-between">
+        <span class="fw-bold"><i class="bi bi-table me-2 text-primary"></i>Chi tiết đánh giá theo sản phẩm</span>
+        <a asp-area="Admin" asp-controller="Admin" asp-action="Index"
+           class="btn btn-sm btn-outline-secondary rounded-pill">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+    <div class="card-body px-4 pb-4">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-chat-square text-muted" style="font-size:3rem;"></i>
+                <p class="text-muted mt-3">Chưa có sản phẩm nào nhận đánh giá.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table ai-table">
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th class="text-center">Danh mục</th>
+                            <th class="text-center">Tổng</th>
+                            <th class="text-center">Tiêu cực</th>
+                            <th style="min-width:160px;">Tỷ lệ tiêu cực</th>
+                            <th class="text-center">Cảnh báo AI</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            bool isHighRisk = item.NegativePercentage > 60;
+                            string barColor = item.NegativePercentage > 60 ? "#dc3545"
+                                            : item.NegativePercentage > 30 ? "#ffc107"
+                                            : "#10b981";
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold" style="font-size:.9rem;">@item.ProductName</div>
+                                    <div class="text-muted" style="font-size:.75rem;">#@item.ProductId</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge" style="background:#e0e7ff; color:#3730a3; border-radius:20px; padding:4px 10px; font-size:.75rem;">
+                                        @item.CategoryName
+                                    </span>
+                                </td>
+                                <td class="text-center fw-bold">@item.TotalReviews</td>
+                                <td class="text-center fw-bold text-danger">@item.NegativeReviews</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="neg-bar-bg flex-grow-1">
+                                            <div class="neg-bar-fill"
+                                                 style="width:@item.NegativePercentage.ToString("0")%; background:@barColor;">
+                                            </div>
+                                        </div>
+                                        <span class="fw-bold small" style="color:@barColor; min-width:42px;">
+                                            @item.NegativePercentage.ToString("0.0")%
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    @if (isHighRisk)
+                                    {
+                                        <span class="badge bg-danger badge-pulse" style="border-radius:20px; padding:5px 10px;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Nguy Cơ Cao
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge" style="background:#d1fae5; color:#065f46; border-radius:20px; padding:5px 10px; font-size:.78rem;">
+                                            <i class="bi bi-shield-check me-1"></i>An Toàn
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.IsHiddenFromRecommendation)
+                                    {
+                                        <span class="status-hidden"><i class="bi bi-eye-slash me-1"></i>Đang Ẩn</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-shown"><i class="bi bi-eye me-1"></i>Đang Hiển Thị</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <form asp-action="ToggleRecommendationVisibility" method="post" style="display:inline;">
+                                        <input type="hidden" name="productId" value="@item.ProductId" />
+                                        @if (item.IsHiddenFromRecommendation)
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                                    title="Cho phép hiển thị lại trong gợi ý">
+                                                <i class="bi bi-eye me-1"></i>Hiển Thị Lại
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                                    title="Ẩn khỏi trang gợi ý">
+                                                <i class="bi bi-eye-slash me-1"></i>Tạm Ẩn
+                                            </button>
+                                        }
+                                    </form>
+                                    <a asp-action="ProductReviews" asp-route-id="@item.ProductId" class="btn btn-sm btn-info text-white rounded-pill px-3 mt-1" title="Xem chi tiết đánh giá">
+                                        <i class="bi bi-chat-dots me-1"></i>Xem đánh giá
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

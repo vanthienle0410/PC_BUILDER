@@ -1,0 +1,117 @@
+@model PCBuilder_DACS.Models.Voucher
+
+@{
+    ViewData["Title"] = "Chỉnh sửa Mã giảm giá";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Chỉnh sửa Mã: @Model.Code</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Admin">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Mã giảm giá</a></li>
+        <li class="breadcrumb-item active">Chỉnh sửa</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-edit me-1"></i> Cập nhật thông tin Voucher
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="UsageCount" />
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Code" class="form-label">Mã Code (vd: PCBUILDER10)</label>
+                        <input asp-for="Code" class="form-control" style="text-transform:uppercase" required />
+                        <span asp-validation-for="Code" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Description" class="form-label">Mô tả ngắn</label>
+                        <input asp-for="Description" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="DiscountType" class="form-label">Loại giảm giá</label>
+                        <select asp-for="DiscountType" class="form-select">
+                            <option value="0">Theo phần trăm (%)</option>
+                            <option value="1">Số tiền cố định (VNĐ)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="DiscountValue" class="form-label">Giá trị giảm</label>
+                        <input asp-for="DiscountValue" class="form-control" type="number" step="0.01" required />
+                        <span asp-validation-for="DiscountValue" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="MinSpend" class="form-label">Đơn tối thiểu để áp dụng (VNĐ)</label>
+                        <input asp-for="MinSpend" class="form-control" type="number" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="MaxDiscount" class="form-label">Giảm tối đa (Chỉ áp dụng cho %) (VNĐ)</label>
+                        <input asp-for="MaxDiscount" class="form-control" type="number" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="StartDate" class="form-label">Ngày bắt đầu</label>
+                        <input asp-for="StartDate" class="form-control" type="datetime-local" required />
+                        <span asp-validation-for="StartDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="EndDate" class="form-label">Ngày kết thúc</label>
+                        <input asp-for="EndDate" class="form-control" type="datetime-local" required />
+                        <span asp-validation-for="EndDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="UsageLimit" class="form-label">Tổng lượt dùng (0 = không giới hạn)</label>
+                        <input asp-for="UsageLimit" class="form-control" type="number" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="UsageLimitPerUser" class="form-label">Giới hạn số lần dùng/Khách hàng</label>
+                        <input asp-for="UsageLimitPerUser" class="form-control" type="number" />
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-3">
+                            <input asp-for="IsStackableWithMembership" class="form-check-input" type="checkbox" role="switch">
+                            <label class="form-check-label" asp-for="IsStackableWithMembership">
+                                <strong>Cho phép cộng dồn với giảm giá hạng Thành viên</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-3">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch">
+                            <label class="form-check-label" asp-for="IsActive">Kích hoạt</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    Đã sử dụng: <strong>@Model.UsageCount</strong> lần.
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Lưu Thay Đổi</button>
+                    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

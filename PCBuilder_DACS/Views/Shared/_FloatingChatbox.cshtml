@@ -1,0 +1,195 @@
+@* ─── Floating Contact Chatbox (Phong Vũ Style) ─── *@
+<style>
+    /* ── Wrapper ── */
+    .pv-floating-chat {
+        position: fixed;
+        bottom: 30px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        z-index: 9999;
+    }
+
+    /* ── Tooltip label ── */
+    .pv-chat-btn {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        text-decoration: none;
+        box-shadow: 0 4px 16px rgba(0,0,0,.22);
+        transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.25s ease;
+        cursor: pointer;
+    }
+
+    .pv-chat-btn:hover {
+        transform: translateY(-6px) scale(1.08);
+        box-shadow: 0 10px 28px rgba(0,0,0,.3);
+    }
+
+    /* Tooltip */
+    .pv-chat-btn::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        right: calc(100% + 12px);
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(20, 20, 20, 0.88);
+        color: #fff;
+        font-family: 'Be Vietnam Pro', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 5px 10px;
+        border-radius: 8px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        backdrop-filter: blur(4px);
+    }
+
+    .pv-chat-btn:hover::before {
+        opacity: 1;
+    }
+
+    /* ── Zalo button ── */
+    .pv-btn-zalo {
+        background: linear-gradient(135deg, #0068FF, #00AAFF);
+    }
+
+    /* ── Messenger button ── */
+    .pv-btn-messenger {
+        background: linear-gradient(135deg, #0099FF, #a259ff);
+    }
+
+    /* ── Phone / Hotline button ── */
+    .pv-btn-phone {
+        background: linear-gradient(135deg, #e30019, #ff4d6d);
+        width: 58px;
+        height: 58px;
+    }
+
+    /* ── Pulse ring animation ── */
+    .pv-btn-phone::after {
+        content: '';
+        position: absolute;
+        inset: -6px;
+        border-radius: 50%;
+        border: 3px solid rgba(227, 0, 25, 0.55);
+        animation: pv-pulse 1.6s ease-out infinite;
+        pointer-events: none;
+    }
+
+    @@keyframes pv-pulse {
+        0%   { transform: scale(0.85); opacity: 1; }
+        70%  { transform: scale(1.45); opacity: 0; }
+        100% { transform: scale(0.85); opacity: 0; }
+    }
+
+    /* Second slower ring */
+    .pv-phone-ring {
+        position: absolute;
+        inset: -12px;
+        border-radius: 50%;
+        border: 3px solid rgba(227, 0, 25, 0.25);
+        animation: pv-pulse 1.6s ease-out 0.5s infinite;
+        pointer-events: none;
+    }
+
+    /* ── Icon inside button ── */
+    .pv-chat-btn svg,
+    .pv-chat-btn img {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        pointer-events: none;
+    }
+
+    .pv-btn-phone svg,
+    .pv-btn-phone img {
+        width: 30px;
+        height: 30px;
+    }
+
+    /* ── Staggered entrance animation ── */
+    .pv-chat-btn {
+        animation: pv-slide-up 0.5s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    .pv-btn-phone    { animation-delay: 0.1s; }
+    .pv-btn-messenger{ animation-delay: 0.25s; }
+    .pv-btn-zalo     { animation-delay: 0.4s; }
+
+    @@keyframes pv-slide-up {
+        from { opacity: 0; transform: translateY(30px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Mobile adjustments ── */
+    @@media (max-width: 480px) {
+        .pv-floating-chat {
+            bottom: 18px;
+            right: 14px;
+            gap: 10px;
+        }
+
+        .pv-chat-btn { width: 46px; height: 46px; }
+        .pv-btn-phone { width: 52px; height: 52px; }
+        .pv-chat-btn::before { display: none; } /* Ẩn tooltip trên mobile */
+    }
+</style>
+
+<div class="pv-floating-chat" aria-label="Liên hệ hỗ trợ">
+
+    @* ── ZALO ── *@
+    <a href="https://zalo.me/0348223043"
+       target="_blank"
+       rel="noopener noreferrer"
+       class="pv-chat-btn pv-btn-zalo"
+       data-tooltip="Chat Zalo"
+       aria-label="Chat Zalo">
+        @* Zalo SVG Logo *@
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="#0068FF"/>
+            <text x="50" y="70" font-size="52" font-weight="900" text-anchor="middle"
+                  font-family="Arial Black, sans-serif" fill="white">Z</text>
+        </svg>
+    </a>
+
+    @* ── MESSENGER ── *@
+    <a href="https://www.messenger.com/e2ee/t/8541974379174543/"
+       target="_blank"
+       rel="noopener noreferrer"
+       class="pv-chat-btn pv-btn-messenger"
+       data-tooltip="Chat Messenger"
+       aria-label="Chat Messenger">
+        @* Messenger Lightning SVG *@
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 6C25.7 6 6 24.3 6 47.2c0 12.4 5.4 23.6 14.1 31.4V94l14.6-8c3.9 1.1 8 1.7 12.3 1.7 24.3 0 44-18.3 44-41.5C91 24.3 74.3 6 50 6z" fill="white"/>
+            <path d="M22.5 58.5l22-23.8 11 11.5 20.5-11.5-22 23.8-11-11.5z" fill="url(#msg_grad)"/>
+            <defs>
+                <linearGradient id="msg_grad" x1="22" y1="58" x2="76" y2="35" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#0099FF"/>
+                    <stop offset="1" stop-color="#a259ff"/>
+                </linearGradient>
+            </defs>
+        </svg>
+    </a>
+
+    @* ── HOTLINE ── *@
+    <a href="tel:19001234"
+       class="pv-chat-btn pv-btn-phone"
+       data-tooltip="Hotline: 1900 1234"
+       aria-label="Gọi Hotline 19001234">
+        <span class="pv-phone-ring"></span>
+        <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C9.6 21 3 14.4 3 6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
+        </svg>
+    </a>
+
+</div>

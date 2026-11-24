@@ -1,0 +1,257 @@
+@model PCBuilder_DACS.Models.ViewModels.CheckoutViewModel
+@{
+    ViewData["Title"] = "Xác Nhận Đặt Hàng";
+}
+
+<div class="container py-5" style="max-width: 960px;">
+
+    <h3 class="fw-bold mb-4">
+        <i class="bi bi-bag-check-fill text-primary me-2"></i>Xác Nhận Đặt Hàng
+    </h3>
+
+    <div class="row g-4">
+
+        <!-- CỘT TRÁI: Form nhập thông tin giao hàng -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="bi bi-truck me-2"></i>Thông Tin Giao Hàng
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="PlaceOrder" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="ReceiverPhone" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <input asp-for="ReceiverPhone" class="form-control"
+                                       placeholder="Ví dụ: 0912 345 678" />
+                            </div>
+                            <span asp-validation-for="ReceiverPhone" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ShippingAddress" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                                <textarea asp-for="ShippingAddress" class="form-control" rows="3"
+                                          placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
+                            </div>
+                            <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
+                        </div>
+
+                        <hr />
+
+                        @if (Model.PaymentMethod == "Trả góp")
+                        {
+                            <div class="bg-warning bg-opacity-10 border border-warning rounded p-3 mb-3">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-credit-card me-2"></i>Thông tin Trả Góp (0%)</h6>
+                                <div class="d-flex justify-content-between mb-2 small">
+                                    <span>Kỳ hạn:</span>
+                                    <span class="fw-semibold">@Model.InstallmentMonths Tháng</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 small">
+                                    <span>Trả trước:</span>
+                                    <span class="fw-semibold">@Model.PrepaymentAmount.ToString("N0") ₫</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 small border-bottom pb-2 border-warning-subtle">
+                                    <span>Góp mỗi tháng:</span>
+                                    <span class="text-danger fw-bold">@Model.MonthlyInstallment.ToString("N0") ₫</span>
+                                </div>
+                                <div class="text-muted small mt-2">
+                                    <i class="bi bi-info-circle me-1"></i>Tổng thanh toán đã bao gồm 2% phí chuyển đổi.
+                                </div>
+                            </div>
+                        }
+
+                        @{
+                            string tierLabel = Model.Tier switch {
+                                PCBuilder_DACS.Models.MembershipTier.Silver  => "Hạng Bạc (2%)",
+                                PCBuilder_DACS.Models.MembershipTier.Gold    => "Hạng Vàng (5%)",
+                                PCBuilder_DACS.Models.MembershipTier.Diamond => "Hạng Kim Cương (10%)",
+                                _                                             => ""
+                            };
+                        }
+                        @if (Model.DiscountAmount > 0)
+                        {
+                            <div class="alert alert-success py-2 px-3 mb-3 d-flex align-items-center gap-2" style="border-radius:10px; font-size:0.9rem;">
+                                <span style="font-size:1.2rem;">🎉</span>
+                                <div>
+                                    <strong>Đặc quyền @tierLabel</strong><br>
+                                    <span>Bạn được giảm <strong class="text-success">-@Model.DiscountAmount.ToString("N0") ₫</strong> cho đơn hàng này!</span>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- KHU VỰC VOUCHER -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold"><i class="bi bi-ticket-perforated text-warning me-1"></i>Mã giảm giá (Tùy chọn)</label>
+                            
+                            @if(!string.IsNullOrEmpty(Model.VoucherMessage))
+                            {
+                                <div class="alert alert-warning py-2 px-3 small mb-2">@Model.VoucherMessage</div>
+                            }
+
+                            <div class="input-group" id="voucher-input-group" style="display: @(string.IsNullOrEmpty(Model.VoucherCode) ? "flex" : "none");">
+                                <input type="text" id="voucher-code" class="form-control text-uppercase" placeholder="Nhập mã giảm giá..." />
+                                <button type="button" class="btn btn-dark" id="btn-apply-voucher">Áp dụng</button>
+                            </div>
+
+                            <div class="input-group" id="voucher-applied-group" style="display: @(!string.IsNullOrEmpty(Model.VoucherCode) ? "flex" : "none");">
+                                <input type="text" id="voucher-code-display" class="form-control text-success fw-bold text-uppercase" value="@Model.VoucherCode" readonly />
+                                <button type="button" class="btn btn-outline-danger" id="btn-remove-voucher">Gỡ bỏ</button>
+                            </div>
+                            <div id="voucher-feedback" class="small mt-1"></div>
+                        </div>
+                        <hr />
+
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">Tạm tính:</span>
+                            <span class="small" id="summary-subtotal">@((Model.TotalAmount + Model.DiscountAmount + Model.VoucherDiscount).ToString("N0")) ₫</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-1 summary-loyalty" style="display: @(Model.DiscountAmount > 0 ? "flex" : "none") !important;">
+                            <span class="text-success small fw-semibold">Khách hàng thân thiết:</span>
+                            <span class="text-success small fw-bold" id="summary-loyalty-discount">-@Model.DiscountAmount.ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 summary-voucher" style="display: @(Model.VoucherDiscount > 0 ? "flex" : "none") !important;">
+                            <span class="text-primary small fw-semibold">Mã giảm giá:</span>
+                            <span class="text-primary small fw-bold" id="summary-voucher-discount">-@Model.VoucherDiscount.ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold fs-6">Tổng thanh toán:</span>
+                            <span class="text-danger fw-bold fs-4" id="summary-total">@Model.TotalAmount.ToString("N0") ₫</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger w-100 py-3 fw-bold fs-5">
+                            <i class="bi bi-check-circle me-2"></i>Xác Nhận Đặt Hàng
+                        </button>
+                        <a asp-controller="Cart" asp-action="Index" class="btn btn-light w-100 mt-2">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại giỏ hàng
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI: Preview cấu hình PC -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="bi bi-cpu me-2"></i>Cấu Hình PC Của Bạn (@Model.CartItems.Count linh kiện)
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var item in Model.CartItems)
+                        {
+                            <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                                @{
+                                    string rawPath = item.ImagePath ?? "";
+                                    string resolvedImage = (rawPath.StartsWith("http://") || rawPath.StartsWith("https://"))
+                                        ? rawPath
+                                        : (string.IsNullOrEmpty(rawPath) ? Url.Content("~/images/default.png") : Url.Content("~/images/" + rawPath));
+                                }
+                                <img src="@resolvedImage" class="rounded"
+                                     style="width:48px;height:48px;object-fit:cover;"
+                                     onerror="this.onerror=null; this.src='@Url.Content("~/images/default.png")';" />
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold small">@item.ProductName</div>
+                                    <div class="text-muted small">@(item.Category?.CategoryName ?? "")</div>
+                                </div>
+                                <span class="text-danger fw-bold small">
+                                    @(item.Price?.ToString("N0") ?? "—") ₫
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                    <div class="p-3 border-top bg-light">
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Tổng cộng</span>
+                            <span class="text-danger" id="summary-total-right">@Model.TotalAmount.ToString("N0") ₫</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            function updateSummary(voucherDiscount, totalDiscount, newTotal) {
+                if (voucherDiscount > 0) {
+                    $('.summary-voucher').show();
+                    $('#summary-voucher-discount').text('-' + voucherDiscount.toLocaleString('vi-VN') + ' ₫');
+                } else {
+                    $('.summary-voucher').hide();
+                }
+                $('#summary-total').text(newTotal.toLocaleString('vi-VN') + ' ₫');
+                $('#summary-total-right').text(newTotal.toLocaleString('vi-VN') + ' ₫');
+            }
+
+            $('#btn-apply-voucher').click(function() {
+                var code = $('#voucher-code').val().trim();
+                if (!code) return;
+
+                var btn = $(this);
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+                $.ajax({
+                    url: '/api/Cart/apply-voucher',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(code),
+                    success: function(res) {
+                        if (res.success) {
+                            $('#voucher-feedback').html('<span class="text-success"><i class="bi bi-check-circle"></i> ' + res.message + '</span>');
+                            $('#voucher-input-group').hide();
+                            $('#voucher-code-display').val(res.voucherCode);
+                            $('#voucher-applied-group').show();
+                            
+                            updateSummary(res.voucherDiscount, res.totalDiscount, res.newTotal);
+                        } else {
+                            $('#voucher-feedback').html('<span class="text-danger"><i class="bi bi-x-circle"></i> ' + res.message + '</span>');
+                        }
+                    },
+                    error: function() {
+                        $('#voucher-feedback').html('<span class="text-danger"><i class="bi bi-x-circle"></i> Có lỗi xảy ra, vui lòng thử lại.</span>');
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).text('Áp dụng');
+                    }
+                });
+            });
+
+            $('#btn-remove-voucher').click(function() {
+                var btn = $(this);
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+                $.ajax({
+                    url: '/api/Cart/remove-voucher',
+                    type: 'POST',
+                    success: function(res) {
+                        if (res.success) {
+                            $('#voucher-feedback').empty();
+                            $('#voucher-code').val('');
+                            $('#voucher-applied-group').hide();
+                            $('#voucher-input-group').show();
+                            
+                            // To perfectly sync the totals after removal, we reload the page or trigger a GET. 
+                            // Since the loyalty discount might revert, a reload is safest and cleanest.
+                            window.location.reload();
+                        }
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).text('Gỡ bỏ');
+                    }
+                });
+            });
+        });
+    </script>
+}

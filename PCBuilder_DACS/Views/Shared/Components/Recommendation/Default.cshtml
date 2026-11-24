@@ -1,0 +1,16 @@
+@model IEnumerable<PCBuilder_DACS.Models.Product>
+
+<div class="recommendation-box p-4 bg-white shadow-sm rounded-4">
+    <h3 class="mb-4 fw-bold text-dark border-start border-primary border-4 ps-3">Linh kiện gợi ý cho bạn</h3>
+
+    <div class="row row-cols-1 row-cols-md-4 g-4">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var item in Model)
+            {
+                    @await Html.PartialAsync("_ProductCard", item, new ViewDataDictionary(ViewData) { { "Badge", "AI Pick" }, { "BadgeColor", "info text-dark" } })
+            }
+        }
+    </div>
+</div>
+

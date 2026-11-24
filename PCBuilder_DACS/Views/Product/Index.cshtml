@@ -1,0 +1,428 @@
+@model List<PCBuilder_DACS.Models.Product>
+@using PCBuilder_DACS.Models
+@{
+    ViewData["Title"] = "Danh sách sản phẩm - PC Builder";
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+    string currentCat    = ViewBag.CurrentCat    as string ?? "";
+    string currentBrand  = ViewBag.CurrentBrand  as string ?? "";
+    string currentSearch = ViewBag.CurrentSearch as string ?? "";
+    string currentSort   = ViewBag.CurrentSort   as string ?? "";
+    decimal? currentMin  = ViewBag.CurrentMin  as decimal?;
+    decimal? currentMax  = ViewBag.CurrentMax  as decimal?;
+    int totalItems  = ViewBag.TotalItems  ?? 0;
+    int totalPages  = ViewBag.TotalPages  ?? 1;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+
+    // Danh sách thương hiệu động từ DB
+    dynamic availableBrandsRaw = ViewBag.AvailableBrands;
+    var availableBrands = new List<(string Brand, int Count)>();
+    if (availableBrandsRaw != null)
+    {
+        foreach (var item in availableBrandsRaw)
+        {
+            availableBrands.Add(((string)item.Brand, (int)item.Count));
+        }
+    }
+
+    var catIcons = new Dictionary<string,string> {
+        {"CPU","bi-cpu"}, {"GPU","bi-gpu-card"}, {"RAM","bi-memory"},
+        {"Mainboard","bi-motherboard"}, {"Storage","bi-device-hdd"},
+        {"Case","bi-box2"}, {"PSU","bi-plug"}, {"Cooler","bi-wind"},
+        {"Monitor","bi-display"}, {"Laptop", "bi-laptop"},
+        {"PC - Máy tính bàn", "bi-pc-display"},
+        {"Gaming Gear", "bi-controller"}
+    };
+    var catColors = new Dictionary<string,string> {
+        {"CPU","#0065FF"}, {"GPU","#059669"}, {"RAM","#7c3aed"},
+        {"Mainboard","#d97706"}, {"Storage","#0891b2"},
+        {"Case","#dc2626"}, {"PSU","#65a30d"}, {"Cooler","#0284c7"},
+        {"Monitor","#8b5cf6"}, {"Laptop", "#f43f5e"},
+        {"PC - Máy tính bàn", "#0d6efd"},
+        {"Gaming Gear", "#7c3aed"}
+    };
+
+    // Helper: xây URL giữ nguyên tất cả filter hiện tại, chỉ thay 1 param
+    string buildUrl(int pg = 1, string? cat = null, string? br = null,
+                    string? src = null, string? srt = null,
+                    decimal? mn = null, decimal? mx = null)
+    {
+        var qs = new System.Text.StringBuilder("/Products?page=" + pg);
+        string c = cat ?? currentCat;
+        string b = br  ?? currentBrand;
+        string s = src ?? currentSearch;
+        string so = srt ?? currentSort;
+        decimal? mi = mn ?? currentMin;
+        decimal? ma = mx ?? currentMax;
+        if (!string.IsNullOrEmpty(c))  qs.Append("&category=" + Uri.EscapeDataString(c));
+        if (!string.IsNullOrEmpty(b))  qs.Append("&brand="    + Uri.EscapeDataString(b));
+        if (!string.IsNullOrEmpty(s))  qs.Append("&search="   + Uri.EscapeDataString(s));
+        if (!string.IsNullOrEmpty(so)) qs.Append("&sort="     + so);
+        if (mi.HasValue) qs.Append("&minPrice=" + mi.Value);
+        if (ma.HasValue) qs.Append("&maxPrice=" + ma.Value);
+        return qs.ToString();
+    }
+}
+
+@section Styles {
+<style>
+    /* ─── Page Layout ─── */
+    .product-index-wrap { display: flex; gap: 24px; align-items: flex-start; }
+
+    /* ─── Sidebar Filter ─── */
+    .sidebar-filter {
+        width: 230px; flex-shrink: 0; position: sticky; top: 80px;
+        background: #fff; border-radius: 16px;
+        padding: 20px; box-shadow: 0 2px 16px rgba(0,0,0,.07);
+    }
+    .sidebar-filter h6 {
+        font-size: 0.72rem; font-weight: 700; color: #94a3b8;
+        letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .cat-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 8px 10px; border-radius: 10px; cursor: pointer;
+        text-decoration: none; color: #334155; font-weight: 500; font-size: 0.85rem;
+        transition: all 0.18s; margin-bottom: 2px;
+    }
+    .cat-item:hover { background: #f1f5f9; color: #0065FF; }
+    .cat-item.active { background: #eff6ff; color: #0065FF; font-weight: 700; }
+    .cat-item .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .cat-count { margin-left: auto; background: #f1f5f9; color: #64748b; font-size: 0.7rem; font-weight: 600; padding: 2px 6px; border-radius: 20px; }
+
+    /* ─── Brand Items ─── */
+    .brand-item {
+        display: flex; align-items: center; gap: 8px;
+        padding: 7px 10px; border-radius: 8px; cursor: pointer;
+        text-decoration: none; color: #334155; font-weight: 500; font-size: 0.83rem;
+        transition: all 0.18s; margin-bottom: 2px;
+    }
+    .brand-item:hover { background: #f1f5f9; color: #0065FF; }
+    .brand-item.active {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        color: #0065FF; font-weight: 700;
+        border-left: 3px solid #0065FF; padding-left: 7px;
+    }
+    .brand-badge { margin-left: auto; background: #f1f5f9; color: #64748b; font-size: 0.68rem; font-weight: 600; padding: 1px 6px; border-radius: 20px; }
+
+    /* ─── Price Filter Buttons ─── */
+    .price-btn {
+        display: block; padding: 6px 10px; border-radius: 8px;
+        text-decoration: none; color: #475569; font-size: 0.8rem;
+        transition: all 0.15s; margin-bottom: 2px; font-weight: 500;
+    }
+    .price-btn:hover { background: #f1f5f9; color: #0065FF; }
+    .price-btn.active { background: #eff6ff; color: #0065FF; font-weight: 700; }
+
+    /* ─── Main Content ─── */
+    .product-main { flex: 1; min-width: 0; }
+
+    /* ─── Top Bar ─── */
+    .product-topbar {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        background: #fff; padding: 12px 16px; border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 16px;
+    }
+    .search-box { position: relative; flex: 1; min-width: 180px; }
+    .search-box input {
+        width: 100%; padding: 8px 16px 8px 38px; border-radius: 50px;
+        border: 1.5px solid #e2e8f0; font-size: 0.86rem;
+        transition: border-color 0.2s; outline: none;
+    }
+    .search-box input:focus { border-color: #0065FF; }
+    .search-box i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; }
+    .sort-select {
+        padding: 8px 12px; border-radius: 50px; border: 1.5px solid #e2e8f0;
+        font-size: 0.83rem; font-weight: 600; color: #334155; outline: none; cursor: pointer;
+        background: white;
+    }
+    .result-count { font-size: 0.8rem; color: #64748b; margin-left: auto; white-space: nowrap; }
+
+    /* ─── Filter Chips ─── */
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .filter-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+        text-decoration: none;
+    }
+    .filter-chip-cat  { background: #eff6ff; color: #0065FF; border: 1.5px solid #bfdbfe; }
+    .filter-chip-brand{ background: #f0fdf4; color: #059669; border: 1.5px solid #a7f3d0; }
+    .filter-chip-price{ background: #fefce8; color: #d97706; border: 1.5px solid #fde68a; }
+    .filter-chip .rm  { font-size: 1rem; line-height: 1; opacity: 0.6; cursor: pointer; }
+    .filter-chip .rm:hover { opacity: 1; }
+
+    /* ─── Product Grid ─── */
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+
+    /* ─── Pagination ─── */
+    .pagination-wrap { display: flex; justify-content: center; gap: 6px; margin-top: 32px; flex-wrap: wrap; }
+    .page-btn {
+        min-width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid #e2e8f0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.85rem; font-weight: 600; color: #334155; text-decoration: none;
+        transition: all 0.18s; background: white;
+    }
+    .page-btn:hover { border-color: #0065FF; color: #0065FF; }
+    .page-btn.active { background: #0065FF; color: white; border-color: #0065FF; }
+    .page-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+    /* ─── Empty State ─── */
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state i { font-size: 4rem; display: block; margin-bottom: 16px; }
+
+    @@media (max-width: 768px) {
+        .product-index-wrap { flex-direction: column; }
+        .sidebar-filter { width: 100%; position: static; }
+        .products-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+}
+
+<div class="container py-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="font-size: 0.83rem;">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-primary">Trang chủ</a></li>
+            <li class="breadcrumb-item @(string.IsNullOrEmpty(currentCat) && string.IsNullOrEmpty(currentBrand) ? "active" : "")">
+                <a href="/Products" class="text-decoration-none @(string.IsNullOrEmpty(currentCat) && string.IsNullOrEmpty(currentBrand) ? "text-dark" : "text-primary")">Sản phẩm</a>
+            </li>
+            @if (!string.IsNullOrEmpty(currentCat))
+            {
+                <li class="breadcrumb-item @(string.IsNullOrEmpty(currentBrand) ? "active" : "")">
+                    <a href="/Products?category=@Uri.EscapeDataString(currentCat)" class="text-decoration-none @(string.IsNullOrEmpty(currentBrand) ? "text-dark" : "text-primary")">@currentCat</a>
+                </li>
+            }
+            @if (!string.IsNullOrEmpty(currentBrand))
+            {
+                <li class="breadcrumb-item active">@currentBrand</li>
+            }
+        </ol>
+    </nav>
+
+    <div class="product-index-wrap">
+
+        <!-- ─── SIDEBAR FILTER ─── -->
+        <aside class="sidebar-filter d-none d-md-block">
+
+            <!-- DANH MỤC -->
+            <h6><i class="bi bi-grid me-1"></i>Danh mục</h6>
+            <a href="/Products@(!string.IsNullOrEmpty(currentSearch) ? "?search=" + Uri.EscapeDataString(currentSearch) : "")"
+               class="cat-item @(string.IsNullOrEmpty(currentCat) ? "active" : "")">
+                <span class="cat-dot" style="background:#64748b;"></span>
+                Tất cả
+            </a>
+            @foreach (var cat in categories)
+            {
+                string icon  = catIcons.ContainsKey(cat.CategoryName)  ? catIcons[cat.CategoryName]  : "bi-box";
+                string color = catColors.ContainsKey(cat.CategoryName) ? catColors[cat.CategoryName] : "#64748b";
+                bool isActive = currentCat == cat.CategoryName;
+                <a href="/Products?category=@Uri.EscapeDataString(cat.CategoryName)@(!string.IsNullOrEmpty(currentSearch) ? "&search=" + Uri.EscapeDataString(currentSearch) : "")"
+                   class="cat-item @(isActive ? "active" : "")">
+                    <i class="bi @icon" style="color:@color; font-size:0.85rem;"></i>
+                    @cat.CategoryName
+                </a>
+            }
+
+            <!-- THƯƠNG HIỆU (động từ DB) -->
+            @if (availableBrands.Any())
+            {
+                <hr class="my-3">
+                <h6><i class="bi bi-tags me-1"></i>Thương hiệu</h6>
+
+                @if (!string.IsNullOrEmpty(currentBrand))
+                {
+                    <!-- Nút xóa lọc brand -->
+                    <a href="@buildUrl(1, br: "")" class="brand-item" style="color:#94a3b8; font-size:0.78rem; padding: 4px 10px;">
+                        <i class="bi bi-x-circle"></i> Xem tất cả
+                    </a>
+                }
+
+                @foreach (var (b, cnt) in availableBrands)
+                {
+                    bool isActiveBrand = string.Equals(currentBrand, b, StringComparison.OrdinalIgnoreCase)
+                                     || (!string.IsNullOrEmpty(currentBrand) && b.Contains(currentBrand, StringComparison.OrdinalIgnoreCase));
+                    <a href="@buildUrl(1, br: b)" class="brand-item @(isActiveBrand ? "active" : "")">
+                        <i class="bi bi-shop" style="font-size:0.8rem; color:#94a3b8;"></i>
+                        @b
+                        <span class="brand-badge">@cnt</span>
+                    </a>
+                }
+            }
+
+            <!-- GIÁ -->
+            <hr class="my-3">
+            <h6><i class="bi bi-currency-dollar me-1"></i>Mức giá</h6>
+            @{
+                var priceRanges = new[]
+                {
+                    (label: "Dưới 2 triệu",  min: (decimal?)null, max: (decimal?)2_000_000),
+                    (label: "2 – 5 triệu",   min: (decimal?)2_000_000, max: (decimal?)5_000_000),
+                    (label: "5 – 15 triệu",  min: (decimal?)5_000_000, max: (decimal?)15_000_000),
+                    (label: "15 – 30 triệu", min: (decimal?)15_000_000, max: (decimal?)30_000_000),
+                    (label: "Trên 30 triệu", min: (decimal?)30_000_000, max: (decimal?)null),
+                };
+            }
+            @foreach (var (label, mn, mx) in priceRanges)
+            {
+                bool priceActive = currentMin == mn && currentMax == mx;
+                string priceUrl  = priceActive ? buildUrl(1, mn: null, mx: null) : buildUrl(1, mn: mn, mx: mx);
+                <a href="@priceUrl" class="price-btn @(priceActive ? "active" : "")">@label</a>
+            }
+
+        </aside>
+
+        <!-- ─── MAIN CONTENT ─── -->
+        <div class="product-main">
+
+            <!-- Active Filter Chips -->
+            @{
+                bool hasFilters = !string.IsNullOrEmpty(currentCat) || !string.IsNullOrEmpty(currentBrand)
+                               || currentMin.HasValue || currentMax.HasValue;
+            }
+            @if (hasFilters)
+            {
+                <div class="filter-chips">
+                    @if (!string.IsNullOrEmpty(currentCat))
+                    {
+                        string ci = catIcons.ContainsKey(currentCat) ? catIcons[currentCat] : "bi-box";
+                        <a href="@buildUrl(1, cat: "", br: "")" class="filter-chip filter-chip-cat" title="Xóa lọc danh mục">
+                            <i class="bi @ci"></i> @currentCat
+                            <span class="rm">×</span>
+                        </a>
+                    }
+                    @if (!string.IsNullOrEmpty(currentBrand))
+                    {
+                        <a href="@buildUrl(1, br: "")" class="filter-chip filter-chip-brand" title="Xóa lọc thương hiệu">
+                            <i class="bi bi-shop"></i> @currentBrand
+                            <span class="rm">×</span>
+                        </a>
+                    }
+                    @if (currentMin.HasValue || currentMax.HasValue)
+                    {
+                        string priceLabel = (currentMin, currentMax) switch
+                        {
+                            (null,     { } mx2) => $"< {mx2/1_000_000:0}tr",
+                            ({ } mn2,  null   ) => $"> {mn2/1_000_000:0}tr",
+                            ({ } mn2,  { } mx2) => $"{mn2/1_000_000:0} – {mx2/1_000_000:0}tr",
+                            _ => ""
+                        };
+                        <a href="@buildUrl(1, mn: null, mx: null)" class="filter-chip filter-chip-price" title="Xóa lọc giá">
+                            <i class="bi bi-tag"></i> @priceLabel
+                            <span class="rm">×</span>
+                        </a>
+                    }
+                    <a href="/Products" class="filter-chip" style="background:#f8fafc; color:#64748b; border:1.5px solid #e2e8f0; font-size:0.75rem;">
+                        <i class="bi bi-x"></i> Xóa tất cả
+                    </a>
+                </div>
+            }
+
+            <!-- Top Bar: Search + Sort + Count -->
+            <form method="get" action="/Products" class="product-topbar">
+                @if (!string.IsNullOrEmpty(currentCat))   { <input type="hidden" name="category"  value="@currentCat">   }
+                @if (!string.IsNullOrEmpty(currentBrand)) { <input type="hidden" name="brand"     value="@currentBrand"> }
+                @if (currentMin.HasValue)                  { <input type="hidden" name="minPrice"  value="@currentMin">   }
+                @if (currentMax.HasValue)                  { <input type="hidden" name="maxPrice"  value="@currentMax">   }
+
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input id="searchInput" type="text" name="search" placeholder="Tìm tên sản phẩm, hãng..."
+                           value="@currentSearch" autocomplete="off">
+                </div>
+
+                @{
+                    var sortOpts = new[]
+                    {
+                        ("",           "Mới nhất"),
+                        ("price_asc",  "Giá thấp → cao"),
+                        ("price_desc", "Giá cao → thấp"),
+                        ("name_asc",   "Tên A → Z"),
+                    };
+                }
+                <select name="sort" class="sort-select" onchange="this.form.submit()">
+                    @foreach (var (val, lbl) in sortOpts)
+                    {
+                        if (currentSort == val)
+                        { <option value="@val" selected="selected">@lbl</option> }
+                        else
+                        { <option value="@val">@lbl</option> }
+                    }
+                </select>
+
+                <button type="submit" class="btn btn-primary rounded-pill px-3" style="font-size:0.83rem; font-weight:600; padding-top:7px; padding-bottom:7px;">
+                    <i class="bi bi-search me-1"></i>Tìm
+                </button>
+
+                <span class="result-count">
+                    <i class="bi bi-box-seam me-1"></i><strong>@totalItems</strong> sản phẩm
+                </span>
+            </form>
+
+            <!-- ─── PRODUCT GRID ─── -->
+            @if (Model.Any())
+            {
+                <div class="products-grid">
+                    @foreach (var p in Model)
+                    {
+                        string badge = string.IsNullOrEmpty(currentCat) ? "Mới" : currentCat switch {
+                            "GPU" => "Hot", "CPU" => "Hot", _ => "Mới"
+                        };
+                        string badgeColor = badge == "Hot" ? "warning text-dark" : "danger";
+                        @await Html.PartialAsync("_ProductCard", p, new ViewDataDictionary(ViewData) {
+                            { "Badge", badge }, { "BadgeColor", badgeColor }
+                        })
+                    }
+                </div>
+
+                <!-- ─── PAGINATION ─── -->
+                @if (totalPages > 1)
+                {
+                    <div class="pagination-wrap">
+                        <!-- Prev -->
+                        <a href="@(currentPage > 1 ? buildUrl(currentPage - 1) : "#")"
+                           class="page-btn @(currentPage <= 1 ? "disabled" : "")">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+
+                        @for (int pg = Math.Max(1, currentPage - 2); pg <= Math.Min(totalPages, currentPage + 2); pg++)
+                        {
+                            <a href="@buildUrl(pg)" class="page-btn @(pg == currentPage ? "active" : "")">@pg</a>
+                        }
+
+                        <!-- Next -->
+                        <a href="@(currentPage < totalPages ? buildUrl(currentPage + 1) : "#")"
+                           class="page-btn @(currentPage >= totalPages ? "disabled" : "")">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                    <p class="text-center text-muted mt-2" style="font-size:0.8rem;">
+                        Trang @currentPage / @totalPages
+                    </p>
+                }
+            }
+            else
+            {
+                <div class="empty-state bg-white rounded-4 shadow-sm">
+                    <i class="bi bi-search text-primary opacity-50"></i>
+                    <h5 class="fw-bold text-dark">Không tìm thấy sản phẩm</h5>
+                    <p class="text-muted">Thử tìm từ khóa khác hoặc chọn danh mục / thương hiệu khác nhé.</p>
+                    <a href="/Products" class="btn btn-primary rounded-pill px-5 mt-2">Xem tất cả sản phẩm</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Debounce live search
+    let searchTimer;
+    const inp = document.getElementById('searchInput');
+    if (inp) {
+        inp.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => inp.closest('form').submit(), 500);
+        });
+    }
+</script>
+}

@@ -1,0 +1,568 @@
+@{
+    ViewData["Title"] = "Xây dựng cấu hình - PC Builder AI";
+}
+
+<style>
+    :root {
+        --primary-color: #004e92;
+        --secondary-color: #000428;
+    }
+
+    body {
+        background-color: #f8f9fa;
+    }
+
+    /* Stepper Styling */
+    .step-item {
+        position: relative;
+        padding-bottom: 20px;
+        padding-left: 30px;
+        border-left: 2px solid #dee2e6;
+        cursor: pointer;
+    }
+
+        .step-item.active {
+            border-left-color: var(--primary-color);
+        }
+
+        .step-item::before {
+            content: "";
+            position: absolute;
+            left: -9px;
+            top: 0;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #dee2e6;
+        }
+
+        .step-item.active::before {
+            background: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(0,78,146,0.2);
+        }
+
+        .step-item.completed::before {
+            content: "\F26A";
+            font-family: "bootstrap-icons";
+            background: #198754;
+            color: white;
+            font-size: 12px;
+            text-align: center;
+            line-height: 16px;
+            border: none;
+        }
+
+    /* Product Card in Build */
+    .build-card {
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        border: 1px solid #eee;
+    }
+
+        .build-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+
+    .sticky-summary {
+        position: sticky;
+        top: 20px;
+    }
+</style>
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4 p-4">
+                <h3 class="fw-bold mb-4 text-dark"><i class="bi bi-cpu-fill me-2"></i>Cấu hình máy tính của bạn</h3>
+
+                <div class="build-steps">
+                    <div class="step-item active" id="step-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">1. Bộ vi xử lý (CPU)</h5>
+                                <p class="text-muted small mb-0" id="txt-cpu">Linh kiện quan trọng nhất, quyết định hiệu năng tổng thể.</p>
+                            </div>
+                            <button class="btn btn-primary rounded-pill px-4" onclick="openSelectModal('CPU', 1)">Chọn CPU</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">2. Bo mạch chủ (Mainboard)</h5>
+                                <p class="text-muted small mb-0" id="txt-mainboard">Cần tương thích với Socket của CPU đã chọn.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-main" onclick="openSelectMainboard()">Chọn Mainboard</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">3. Bộ nhớ RAM</h5>
+                                <p class="text-muted small mb-0" id="txt-ram">Dung lượng càng lớn, đa nhiệm càng mượt.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-ram" onclick="openSelectRam()">Chọn RAM</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">4. Card màn hình (VGA)</h5>
+                                <p class="text-muted small mb-0" id="txt-vga">Xử lý hình ảnh, chơi game mượt mà hơn.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-vga" onclick="openSelectModal('Card màn hình', 4)">Chọn VGA</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-5">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">5. Ổ cứng lưu trữ</h5>
+                                <p class="text-muted small mb-0" id="txt-storage">Khởi động máy và load game trong chớp mắt.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-storage" onclick="openSelectModal('Storage', 14)">Chọn Storage</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-6">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">6. Nguồn máy tính (PSU)</h5>
+                                <p class="text-muted small mb-0" id="txt-psu">Cung cấp điện năng cho toàn bộ hệ thống.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-psu" onclick="openSelectModal('PSU', 16)">Chọn PSU</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-7">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">7. Vỏ máy (Case)</h5>
+                                <p class="text-muted small mb-0" id="txt-case">Bảo vệ linh kiện và tạo điểm nhấn thẩm mỹ.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-case" onclick="openSelectModal('Case', 15)">Chọn Case</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-8">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">8. Tản nhiệt (Cooling)</h5>
+                                <p class="text-muted small mb-0" id="txt-cooling">Giữ cho hệ thống hoạt động mát mẻ và ổn định.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-cooling" onclick="openSelectModal('Cooler', 17)">Chọn Cooler</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item" id="step-9">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0">9. Màn hình (Monitor)</h5>
+                                <p class="text-muted small mb-0" id="txt-monitor">Hiển thị hình ảnh sắc nét, mượt mà.</p>
+                            </div>
+                            <button class="btn btn-outline-primary rounded-pill px-4" id="btn-monitor" onclick="openSelectModal('Monitor', 9)">Chọn Monitor</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sticky-summary">
+                <div class="card shadow border-0 rounded-4 overflow-hidden">
+                    <div class="p-3 text-white text-center" style="background: var(--secondary-color);">
+                        <h5 class="mb-0 fw-bold">Tổng quan cấu hình</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush mb-3" id="summary-list">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 border-0">
+                                <span class="text-muted">Chưa có linh kiện nào</span>
+                            </li>
+                        </ul>
+                        <div class="d-flex justify-content-between align-items-end pt-3 border-top">
+                            <span class="fw-bold">Tạm tính:</span>
+                            <h3 class="text-danger fw-bold mb-0" id="total-price">0 đ</h3>
+                        </div>
+                        <button id="btn-submit-build" onclick="saveBuild()" class="btn btn-success w-100 rounded-pill mt-4 py-3 fw-bold shadow-sm">
+                            <i class="bi bi-cart-check-fill me-2"></i>LÀM THÀNH CẤU HÌNH
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3 rounded-4 border-0 small shadow-sm">
+                    <i class="bi bi-lightbulb-fill me-2 text-warning"></i>
+                    AI sẽ tự động lọc linh kiện tương thích sau khi Bạn chọn CPU.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header border-0 bg-light p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalTitle">Chọn linh kiện</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="product-list" class="row g-3">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 1. Khai báo 6 món đồ
+    let buildState = {
+        cpu: null,
+        mainboard: null,
+        ram: null,
+        vga: null,
+        storage: null,
+        psu: null,
+        case: null,
+        cooling: null,
+        monitor: null,
+        totalPrice: 0
+    };
+
+    // 2. Mở Modal chung (CPU, VGA, Ổ cứng, Nguồn)
+    async function openSelectModal(categoryName, categoryId) {
+        const productList = document.getElementById('product-list');
+        document.getElementById('modalTitle').innerText = `Chọn ${categoryName}`;
+        productList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+
+        const myModal = new bootstrap.Modal(document.getElementById('productModal'));
+        myModal.show();
+
+        try {
+            const response = await fetch(`/api/Products/ByCategory/${categoryId}`);
+            const products = await response.json();
+            renderProducts(products, categoryId);
+        } catch (error) {
+            productList.innerHTML = '<p class="text-danger text-center">Không tải được dữ liệu sản phẩm.</p>';
+        }
+    }
+
+    // 3. Mở Modal Mainboard (AI gợi ý nếu đã chọn CPU, ngược lại hiện tất cả)
+    async function openSelectMainboard() {
+        const productList = document.getElementById('product-list');
+        document.getElementById('modalTitle').innerText = buildState.cpu
+            ? "Chọn Mainboard tương thích (AI)"
+            : "Chọn Mainboard";
+        productList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+
+        const myModal = new bootstrap.Modal(document.getElementById('productModal'));
+        myModal.show();
+
+        try {
+            let url = buildState.cpu
+                ? `/api/Recommendations/suggest-mainboard/${buildState.cpu.id}`
+                : `/api/Products/ByCategory/2`;
+            const response = await fetch(url);
+            const products = await response.json();
+            renderProducts(products, 2);
+        } catch (error) {
+            productList.innerHTML = '<p class="text-danger text-center">Lỗi tải dữ liệu.</p>';
+        }
+    }
+
+    // 4. Mở Modal RAM (AI gợi ý nếu đã chọn Mainboard, ngược lại hiện tất cả)
+    async function openSelectRam() {
+        const productList = document.getElementById('product-list');
+        document.getElementById('modalTitle').innerText = buildState.mainboard
+            ? "Chọn RAM tương thích"
+            : "Chọn RAM";
+        productList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+
+        const myModal = new bootstrap.Modal(document.getElementById('productModal'));
+        myModal.show();
+
+        try {
+            let url = buildState.mainboard
+                ? `/api/Recommendations/suggest-ram/${buildState.mainboard.id}`
+                : `/api/Products/ByCategory/3`;
+            const response = await fetch(url);
+            const products = await response.json();
+            renderProducts(products, 3);
+        } catch (error) {
+            productList.innerHTML = '<p class="text-danger text-center">Lỗi lọc RAM.</p>';
+        }
+    }
+
+    // 5. Hiển thị sản phẩm ra Modal
+    function renderProducts(products, categoryId) {
+        const productList = document.getElementById('product-list');
+        productList.innerHTML = '';
+
+        if (products.length === 0) {
+            productList.innerHTML = '<p class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Không tìm thấy linh kiện phù hợp.</p>';
+            return;
+        }
+
+        products.forEach(p => {
+            const id = p.productId || p.id;
+            const name = p.productName || p.name;
+            const price = p.price || 0;
+            const imagePath = p.imagePath || '';
+            // Hỗ trợ cả URL bên ngoài (CDN) và đường dẫn local
+            const imageUrl = imagePath
+                ? (imagePath.startsWith('http://') || imagePath.startsWith('https://') ? imagePath : `/images/${imagePath}`)
+                : '/images/default.png';
+
+            const col = document.createElement('div');
+            col.className = 'col-md-6';
+            col.innerHTML = `
+                <div class="card h-100 build-card shadow-sm" style="border-radius:14px; overflow:hidden;">
+                    <div style="padding:12px 12px 0;">
+                        <div style="width:100%; height:130px; background-image: url('${imageUrl}?v=${Date.now()}'); background-size: contain; background-position: center; background-repeat: no-repeat; border-radius: 8px; background-color: #f8f9fa;"></div>
+                    </div>
+                    <div class="card-body pt-2 pb-3 px-3">
+                        <h6 class="fw-bold mb-1" style="font-size:.85rem; line-height:1.4; min-height:2.8em;"></h6>
+                        <p class="text-danger fw-bold mb-2" style="font-size:1rem;">${price.toLocaleString()} đ</p>
+                        <button class="btn btn-sm btn-primary rounded-pill w-100 btn-select-product">
+                            <i class="bi bi-check2-circle me-1"></i>Chọn
+                        </button>
+                    </div>
+                </div>
+            `;
+            // Gán tên sản phẩm bằng textContent để hỗ trợ tiếng Việt đầy đủ
+            col.querySelector('h6').textContent = name;
+            // Gán sự kiện chọn sản phẩm qua addEventListener (tránh lỗi ký tự đặc biệt tiếng Việt)
+            col.querySelector('.btn-select-product').addEventListener('click', function() {
+                selectProduct(id, name, price, categoryId, imageUrl);
+            });
+            productList.appendChild(col);
+        });
+    }
+
+    // 6. Xử lý khi chọn linh kiện (Cập nhật dây chuyền 9 bước)
+    // Helper: tạo HTML hiển thị tên + ảnh thu nhỏ khi đã chọn linh kiện
+    function setStepSelected(txtId, name, imageUrl) {
+        const el = document.getElementById(txtId);
+        el.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'd-flex align-items-center gap-2 mt-1';
+        wrapper.innerHTML = `
+            <img src="${imageUrl}" style="width:40px; height:40px; object-fit:contain; border-radius:6px; background:#f8f9fa; border:1px solid #eee;" onerror="this.onerror=null; this.src='/images/default.png'">
+            <b class="text-success" style="font-size:.85rem;"><i class="bi bi-check-circle-fill me-1"></i></b>
+        `;
+        // Gán tên bằng textContent để hỗ trợ tiếng Việt
+        wrapper.querySelector('b').appendChild(document.createTextNode(name));
+        el.appendChild(wrapper);
+    }
+
+    function selectProduct(id, name, price, categoryId, imageUrl) {
+        imageUrl = imageUrl || '/images/default.png';
+
+        if (categoryId === 1) { // CPU
+            buildState.cpu = { id, name, price, imageUrl };
+            setStepSelected('txt-cpu', name, imageUrl);
+            document.getElementById('step-1').classList.add('completed');
+
+            const btnMain = document.getElementById('btn-main');
+            btnMain.disabled = false;
+            btnMain.classList.replace('btn-outline-secondary', 'btn-primary');
+            btnMain.setAttribute('onclick', 'openSelectMainboard()');
+            document.getElementById('step-2').classList.add('active');
+
+            // Xóa dữ liệu cũ nếu đổi CPU
+            buildState.mainboard = null; buildState.ram = null;
+        }
+        else if (categoryId === 2) { // Mainboard
+            buildState.mainboard = { id, name, price, imageUrl };
+            setStepSelected('txt-mainboard', name, imageUrl);
+            document.getElementById('step-2').classList.add('completed');
+
+            const btnRam = document.getElementById('btn-ram');
+            btnRam.disabled = false;
+            btnRam.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-3').classList.add('active');
+
+            buildState.ram = null;
+        }
+        else if (categoryId === 3) { // RAM
+            buildState.ram = { id, name, price, imageUrl };
+            setStepSelected('txt-ram', name, imageUrl);
+            document.getElementById('step-3').classList.add('completed');
+
+            // Mở khóa VGA
+            const btnVga = document.getElementById('btn-vga');
+            btnVga.disabled = false;
+            btnVga.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-4').classList.add('active');
+        }
+        else if (categoryId === 4) { // VGA
+            buildState.vga = { id, name, price, imageUrl };
+            setStepSelected('txt-vga', name, imageUrl);
+            document.getElementById('step-4').classList.add('completed');
+
+            // Mở khóa Ổ cứng
+            const btnStorage = document.getElementById('btn-storage');
+            btnStorage.disabled = false;
+            btnStorage.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-5').classList.add('active');
+        }
+        else if (categoryId === 14) { // Storage
+            buildState.storage = { id, name, price, imageUrl };
+            setStepSelected('txt-storage', name, imageUrl);
+            document.getElementById('step-5').classList.add('completed');
+
+            // Mở khóa Nguồn
+            const btnPsu = document.getElementById('btn-psu');
+            btnPsu.disabled = false;
+            btnPsu.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-6').classList.add('active');
+        }
+        else if (categoryId === 16) { // PSU
+            buildState.psu = { id, name, price, imageUrl };
+            setStepSelected('txt-psu', name, imageUrl);
+            document.getElementById('step-6').classList.add('completed');
+
+            // Mở khóa Vỏ máy
+            const btnCase = document.getElementById('btn-case');
+            btnCase.disabled = false;
+            btnCase.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-7').classList.add('active');
+        }
+        else if (categoryId === 15) { // Case
+            buildState.case = { id, name, price, imageUrl };
+            setStepSelected('txt-case', name, imageUrl);
+            document.getElementById('step-7').classList.add('completed');
+
+            // Mở khóa Tản nhiệt
+            const btnCooling = document.getElementById('btn-cooling');
+            btnCooling.disabled = false;
+            btnCooling.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-8').classList.add('active');
+        }
+        else if (categoryId === 17) { // Cooler
+            buildState.cooling = { id, name, price, imageUrl };
+            setStepSelected('txt-cooling', name, imageUrl);
+            document.getElementById('step-8').classList.add('completed');
+
+            // Mở khóa Màn hình
+            const btnMonitor = document.getElementById('btn-monitor');
+            btnMonitor.disabled = false;
+            btnMonitor.classList.replace('btn-outline-secondary', 'btn-primary');
+            document.getElementById('step-9').classList.add('active');
+        }
+        else if (categoryId === 9) { // MÀN HÌNH
+            buildState.monitor = { id, name, price, imageUrl };
+            setStepSelected('txt-monitor', name, imageUrl);
+            document.getElementById('step-9').classList.add('completed');
+        }
+
+        updateSummary();
+        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+    }
+
+    // 7. Cập nhật Bill tính tiền (6 món)
+    function updateSummary() {
+        const summaryList = document.getElementById('summary-list');
+        summaryList.innerHTML = '';
+        let total = 0;
+
+        if (buildState.cpu) { addSummaryItem(summaryList, 'CPU', buildState.cpu.name, buildState.cpu.price, buildState.cpu.imageUrl); total += buildState.cpu.price; }
+        if (buildState.mainboard) { addSummaryItem(summaryList, 'Mainboard', buildState.mainboard.name, buildState.mainboard.price, buildState.mainboard.imageUrl); total += buildState.mainboard.price; }
+        if (buildState.ram) { addSummaryItem(summaryList, 'RAM', buildState.ram.name, buildState.ram.price, buildState.ram.imageUrl); total += buildState.ram.price; }
+        if (buildState.vga) { addSummaryItem(summaryList, 'VGA', buildState.vga.name, buildState.vga.price, buildState.vga.imageUrl); total += buildState.vga.price; }
+        if (buildState.storage) { addSummaryItem(summaryList, 'Ổ cứng', buildState.storage.name, buildState.storage.price, buildState.storage.imageUrl); total += buildState.storage.price; }
+        if (buildState.psu) { addSummaryItem(summaryList, 'Nguồn', buildState.psu.name, buildState.psu.price, buildState.psu.imageUrl); total += buildState.psu.price; }
+        if (buildState.case) { addSummaryItem(summaryList, 'Vỏ máy', buildState.case.name, buildState.case.price, buildState.case.imageUrl); total += buildState.case.price; }
+        if (buildState.cooling) { addSummaryItem(summaryList, 'Tản nhiệt', buildState.cooling.name, buildState.cooling.price, buildState.cooling.imageUrl); total += buildState.cooling.price; }
+        if (buildState.monitor) { addSummaryItem(summaryList, 'Màn hình', buildState.monitor.name, buildState.monitor.price, buildState.monitor.imageUrl); total += buildState.monitor.price; }
+
+        if(total === 0) {
+            summaryList.innerHTML = '<li class="list-group-item d-flex justify-content-between align-items-center px-0 border-0"><span class="text-muted">Chưa có linh kiện nào</span></li>';
+        }
+
+        document.getElementById('total-price').innerText = total.toLocaleString() + ' đ';
+    }
+
+    function addSummaryItem(parent, label, name, price, imageUrl) {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex align-items-center gap-2 px-0 border-0 py-2';
+        li.innerHTML = `
+            <img src="${imageUrl || '/images/default.png'}" style="width:36px; height:36px; object-fit:contain; border-radius:6px; background:#f8f9fa; border:1px solid #eee; flex-shrink:0;" onerror="this.onerror=null; this.src='/images/default.png'">
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold small text-primary" style="font-size:.7rem;">${label}</div>
+                <span class="text-muted d-block text-truncate" style="font-size:.75rem;"></span>
+            </div>
+            <span class="badge bg-light text-dark rounded-pill flex-shrink-0" style="font-size:.75rem;">${price.toLocaleString()}đ</span>
+        `;
+        // Gán tên bằng textContent để hỗ trợ tiếng Việt đầy đủ
+        li.querySelector('span.text-muted').textContent = name;
+        parent.appendChild(li);
+    }
+
+    // 8. HÀM MỚI THÊM VÀO: XỬ LÝ KHI BẤM NÚT LÀM THÀNH CẤU HÌNH
+    // 8. HÀM CHÍNH THỨC: GỬI CẤU HÌNH VÀO GIỎ HÀNG (SESSION)
+    async function saveBuild() {
+        // Kiểm tra: cần ít nhất 1 linh kiện
+        const selectedCount = Object.values(buildState).filter(v => v !== null && v !== 0).length;
+        if (selectedCount === 0) {
+            alert('Vui lòng chọn ít nhất một linh kiện để thêm vào giỏ hàng!');
+            return;
+        }
+
+        // Đổi nút thành trạng thái "Đang gửi..."
+        const btnSubmit = document.getElementById('btn-submit-build');
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang lưu giỏ hàng...';
+        btnSubmit.disabled = true;
+
+        // Gom tất cả ID linh kiện (loại bỏ những món null nếu khách không chọn hết)
+        let selectedIds = [
+            buildState.cpu.id,
+            buildState.mainboard.id,
+            buildState.ram ? buildState.ram.id : null,
+            buildState.vga ? buildState.vga.id : null,
+            buildState.storage ? buildState.storage.id : null,
+            buildState.psu ? buildState.psu.id : null,
+            buildState.case ? buildState.case.id : null,
+            buildState.cooling ? buildState.cooling.id : null,
+            buildState.monitor ? buildState.monitor.id : null
+        ].filter(id => id !== null);
+
+        try {
+            // GỬI DỮ LIỆU SANG CART CONTROLLER (Backend)
+            const response = await fetch('/api/Cart/add-build', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(selectedIds)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                // Nếu Server báo OK
+                alert("🎉 Tuyệt vời! " + result.message);
+                console.log("Tổng số món trong giỏ hiện tại:", result.totalItems);
+
+                // (Gợi ý) Sau khi thêm xong có thể chuyển hướng sang trang Giỏ hàng để khách xem
+                // window.location.href = '/Cart';
+            } else {
+                alert("Có lỗi xảy ra: " + result.message);
+            }
+        } catch (error) {
+            console.error("Lỗi Fetch:", error);
+            alert("Không kết nối được với máy chủ !");
+        } finally {
+            // Trả lại trạng thái nút bấm
+            btnSubmit.innerHTML = '<i class="bi bi-cart-check-fill me-2"></i>LÀM THÀNH CẤU HÌNH';
+            btnSubmit.disabled = false;
+        }
+    }
+</script>

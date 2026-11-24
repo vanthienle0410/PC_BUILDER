@@ -1,0 +1,153 @@
+@model IEnumerable<PCBuilder_DACS.Models.Voucher>
+
+@{
+    ViewData["Title"] = "Quản lý Mã giảm giá";
+}
+
+<style>
+    .voucher-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 1rem;
+        transition: transform 0.2s;
+    }
+    .voucher-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .voucher-left {
+        background: linear-gradient(135deg, #f53d2d, #ff6b00);
+        color: white;
+        padding: 20px;
+        width: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        border-right: 2px dashed #fff;
+    }
+    .voucher-left h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    .voucher-body {
+        padding: 15px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .voucher-title {
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 5px;
+        color: #333;
+    }
+    .voucher-desc {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+    .voucher-meta {
+        font-size: 0.8rem;
+        color: #999;
+    }
+    .voucher-right {
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-left: 1px solid #eee;
+        min-width: 150px;
+    }
+    .voucher-status-expired {
+        opacity: 0.6;
+        filter: grayscale(100%);
+    }
+</style>
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Quản lý Mã giảm giá (Vouchers)</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Mã giảm giá</li>
+    </ol>
+
+    <div class="mb-4">
+        <a asp-action="Create" class="btn btn-primary"><i class="fas fa-plus"></i> Tạo mã mới</a>
+    </div>
+
+    <div class="row">
+        @foreach (var item in Model)
+        {
+            var isExpired = DateTime.Now > item.EndDate;
+            var isUsedUp = item.UsageLimit > 0 && item.UsageCount >= item.UsageLimit;
+            var cardClass = (isExpired || isUsedUp || !item.IsActive) ? "voucher-status-expired" : "";
+
+            <div class="col-md-6 col-lg-4">
+                <div class="voucher-card @cardClass">
+                    <div class="voucher-left">
+                        @if(item.DiscountType == PCBuilder_DACS.Models.DiscountType.Percentage)
+                        {
+                            <h3>@item.DiscountValue.ToString("0.##")%</h3>
+                        }
+                        else
+                        {
+                            <h3>@((item.DiscountValue / 1000).ToString("0"))K</h3>
+                        }
+                        <small>GIẢM</small>
+                    </div>
+                    <div class="voucher-body">
+                        <div class="voucher-title">@item.Code</div>
+                        <div class="voucher-desc">Đơn tối thiểu @item.MinSpend.ToString("N0")đ</div>
+                        
+                        <div class="progress mt-2 mb-1" style="height: 5px;">
+                            @{
+                                var percent = item.UsageLimit > 0 ? (item.UsageCount * 100 / item.UsageLimit) : 0;
+                            }
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: @percent%" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="voucher-meta d-flex justify-content-between">
+                            <span>Đã dùng: @item.UsageCount / @(item.UsageLimit == 0 ? "∞" : item.UsageLimit.ToString())</span>
+                            <span>HSD: @item.EndDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    </div>
+                    <div class="voucher-right">
+                        @if (!item.IsActive)
+                        {
+                            <span class="badge bg-secondary mb-2">Đã khóa</span>
+                        }
+                        else if (isExpired)
+                        {
+                            <span class="badge bg-danger mb-2">Hết hạn</span>
+                        }
+                        else if (isUsedUp)
+                        {
+                            <span class="badge bg-warning text-dark mb-2">Hết lượt</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success mb-2">Đang chạy</span>
+                        }
+
+                        <div class="btn-group">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Sửa"><i class="fas fa-edit"></i></a>
+                            <form asp-action="ToggleActive" asp-route-id="@item.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-outline-warning" : "btn-outline-success")" title="@(item.IsActive ? "Khóa mã" : "Kích hoạt")">
+                                    <i class="fas @(item.IsActive ? "fa-lock" : "fa-unlock")"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
